@@ -1,9 +1,17 @@
 class Element:
 
-    def __init__(self, tag, paras={}):
+    def __init__(self, tag, paras=None):
+        # wth?
+        if paras == None:
+            paras = {}
+
         self.tag = tag
         self._paras = paras
         self._style = {}
+
+    def translate(self, (delta)):
+        # TODO: replaces other transformations!
+        self._paras['transform'] = "translate({x} {y})".format(x=delta[0], y=delta[1])
 
     def style(self, key, value):
         self._style[key] = value
