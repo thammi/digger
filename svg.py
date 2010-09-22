@@ -2,12 +2,25 @@ class Element:
 
     def __init__(self, tag, paras={}):
         self.tag = tag
-        self.paras = paras
+        self._paras = paras
+        self._style = {}
+
+    def style(self, key, value):
+        self._style[key] = value
 
     def write(self, out):
         out.write("<{0}".format(self.tag))
+
+        # getting style
+        style = self._style
+        if style:
+            out.write(' style="')
+            for key, value in style.iteritems():
+                out.write("{key}: {value}; ".format(key=key, value=value))
+            out.write('"')
         
-        for key, value in self.paras.iteritems():
+        # explicit parameters
+        for key, value in self._paras.iteritems():
             out.write(' {key}="{value}"'.format(key=key, value=value))
 
         if hasattr(self, 'payload'):
@@ -76,9 +89,4 @@ class SVG(Group):
 
         # footer
         out.write('</svg>')
-
-import sys
-svg = SVG((400, 400))
-svg.add(Text("blub", (10, 10)))
-svg.write(sys.stdout)
 
