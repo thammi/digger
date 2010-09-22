@@ -1,0 +1,6 @@
+data
+*.json
+*.swp
+*.pyc
+*.svg
+*.png
