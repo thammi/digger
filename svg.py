@@ -44,9 +44,20 @@ class Text(Element):
     def payload(self, out):
         out.write(self.text)
 
+class Circle(Element):
+
+    def __init__(self, radius, position):
+        paras = {
+                'cx': position[0],
+                'cy': position[1],
+                'r': radius,
+                }
+
+        Element.__init__(self, 'circle', paras)
+
 class Line(Element):
 
-    def __init__(self, (start), (to)):
+    def __init__(self, start, to):
         paras = {
                 'x1': start[0],
                 'y1': start[1],
