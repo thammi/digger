@@ -1,8 +1,11 @@
 import json
-from datetime import datetime
+from datetime import date
 
-def date_to_weekday(date):
-    return datetime(*date[:3]).weekday()
+def date_to_week(date_l):
+    return date(*date_l[:3]).isocalendar()[:2]
+
+def date_to_weekday(date_l):
+    return date(*date_l[:3]).weekday()
 
 class Base:
     

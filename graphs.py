@@ -117,7 +117,6 @@ def _paint_punchcard(commits):
 
 def _main(argv):
     from git_stats import Base, date_to_weekday
-    from matplotlib.dates import date2num
     from datetime import datetime
 
     b = Base()
