@@ -10,8 +10,9 @@ import os, stat, errno
 import fuse
 from fuse import Fuse
 from StringIO import StringIO
+from datetime import datetime
 
-from projects import *
+from git_stats import *
 from graphs import *
 
 if not hasattr(fuse, '__version__'):
@@ -37,20 +38,36 @@ class MyStat(fuse.Stat):
         self.st_mtime = 0
         self.st_ctime = 0
 
-def exec_svg(data):
+def exec_svg(agg):
+    keys = agg.keys()
+    data = [(key, agg[key]) for key in keys]
+
     buf = StringIO()
     punch_svg(data, buf)
 
     return buf.getvalue()
 
-def week_svg(blob):
+def exec_curve(agg):
+    keys = agg.keys()
+    keys.sort()
+
+    values = [agg[key] for key in keys]
+
+    data = (keys, values)
+
+    buf = StringIO()
+    line_plot(data, buf)
+    return buf.getvalue()
+
+def curve_day(blob):
+    commits = blob.commits()
+    agg = aggre_count(commits, lambda c: date2num(datetime(*c['date'][:3])))
+    return exec_curve(agg)
+
+def week_punchcard(blob):
     commits = blob.commits()
     agg = aggre_count(commits, lambda c: (c['date'][3], date_to_weekday(c['date'])))
-
-    keys = agg.keys()
-    data = [(key, agg[key]) for key in keys]
-
-    return exec_svg(data)
+    return exec_svg(agg)
 
 class Cache:
 
@@ -77,7 +94,8 @@ class Cache:
 class ProjectFS(Fuse):
 
     ACTION_HOOKS = {
-            'punch_week.svg': week_svg,
+            'punch_week.svg': week_punchcard,
+            'curve_day.png': curve_day,
             }
 
     def __init__(self, base, *args, **kw):
