@@ -9,7 +9,7 @@ def date_to_weekday(date_l):
 
 class Base:
     
-    def __init__(self, file_name="raw.json"):
+    def __init__(self, file_name="raw_git.json"):
         f = file(file_name)
         self.data = data = json.load(f)
         f.close()
