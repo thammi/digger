@@ -3,7 +3,7 @@
 import Gnuplot
 
 from projects import *
-
+import svg
 
 def aggre_count(commits, key):
     counter = {}
@@ -37,60 +37,49 @@ def punch_svg(data, out, size = (800, 300)):
     size_step = box_size / 2 * 0.8 / max_point
     font_size = box_size*0.7
     
-    out.write('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="%ipx" height="%ipx">\n' % size)
+    root = svg.SVG(size)
+    root.style('fill', 'black')
+    root.style('stroke', 'grey')
 
-    out.write('<rect x="0" y="0" width="{0}" height="{1}" fill="white" />'.format(size[0], size[1]))
-    out.write('<g style="fill: black; stroke: gray; font-size: {font};" text-anchor="middle">'.format(font=font_size))
+    caption = svg.Group()
+    root.add(caption)
+    caption.style('fill', 'grey')
+    caption.style('font-size', font_size)
+    caption.style('text-anchor', 'middle')
 
-    # painting some lines to enhance readability
+    # vertical captions
+    for step in range(y_amount - 1):
+        y = y_step * (step + 2) - (box_size - font_size) / 2
+        x = x_step / 2
+
+        caption.add(svg.Text(str(step), (x, y)))
+
+    # horizontal captions
+    for step in range(x_amount - 1):
+        x = x_step * (step + 1) + x_step / 2
+        y = y_step - (box_size - font_size) / 2
+
+        caption.add(svg.Text(str(step), (x, y)))
 
     # painting horizontal lines
     for step in range(y_amount + 1):
-        if step:
-            geo = {
-                    'y': y_step * (step + 1 ) - (box_size - font_size) / 2,
-                    'data': step - 1,
-                    'x': x_step / 2,
-                    }
-
-            out.write('<text style="fill: gray;" y="{y}" x="{x}">{data}</text>\n'.format(**geo))
-
-        geo = {
-                'x_size': size[0],
-                'y': y_step * step,
-                }
-        out.write('<line x1="0" x2="{x_size}" y1="{y}" y2="{y}" />\n'.format(**geo))
+        y = y_step * step
+        root.add(svg.Line((0, y), (size[0], y)))
 
     # painting vertical lines
     for step in range(x_amount + 1):
-        if step:
-            geo = {
-                    'x': x_step * step + x_step / 2,
-                    'y': y_step - (box_size - font_size) / 2,
-                    'data': step - 1,
-                    }
-
-            out.write('<text style="fill: gray;" x="{x}" y="{y}">{data}</text>\n'.format(**geo))
-
-        geo = {
-                'y_size': size[1],
-                'x': x_step * step,
-                }
-
-        out.write('<line y1="0" y2="{y_size}" x1="{x}" x2="{x}" />\n'.format(**geo))
+        x = x_step * step
+        root.add(svg.Line((x, 0), (x, size[1])))
 
     # painting the data
     for (x, y), value in data:
-        geo =  {
-            'pos_x': x_step * (x + 1) + x_step / 2,
-            'pos_y': y_step * (y + 1) + y_step / 2,
-            'size': size_step * value,
-        }
+        x = x_step * (x + 1) + x_step / 2
+        y = y_step * (y + 1) + y_step / 2
+        radius = size_step * value
 
-        out.write('<circle cx="{pos_x}" cy="{pos_y}" r="{size}"/>\n'.format(**geo))
+        root.add(svg.Circle(radius, (x, y)))
 
-    out.write('</g>')
-    out.write('</svg>\n')
+    root.write(out)
 
 def main(argv):
     b = Base()
