@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import json
@@ -27,6 +27,7 @@ def get_dents(user, count = 200, page = 1):
 
         return dents
     else:
+        print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
         return None
 
 def save_dents(user, dents, file_name="raw_dents.json"):
@@ -63,7 +64,7 @@ if __name__ == '__main__':
             dents = get_dents(user)
 
             if not dents:
-                print "ERROR: Unable to fetch messages!"
+                print "ERROR: No results!"
             else:
                 save_dents(user, dents)
 
