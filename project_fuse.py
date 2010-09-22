@@ -52,12 +52,6 @@ def week_svg(blob):
 
     return exec_svg(data)
 
-import logging
-h = logging.FileHandler('/tmp/log')
-rl = logging.getLogger()
-rl.addHandler(h)
-rl.setLevel(logging.DEBUG)
-
 class Cache:
 
     def __init__(self):
@@ -106,19 +100,14 @@ class ProjectFS(Fuse):
     def _get_blob(self, path):
         cur = self.base
 
-        logging.info(">>>>>>>>>>>>>>>>> path")
-
         for element in path[1:].split('/'):
-            logging.info(element)
             if element:
                 subs = cur.subs()
                 if element in subs:
                     cur = subs[element]
                 else:
-                    logging.info("return none")
                     return None
 
-        logging.info("return " + str(cur))
         return cur
 
     def getattr(self, path):
@@ -142,29 +131,20 @@ class ProjectFS(Fuse):
                 st.st_mode = stat.S_IFDIR | 0755
                 st.st_nlink = 1
             else:
-                logging.error("not found in stat: " + path)
                 return -errno.ENOENT
         return st
 
     def readdir(self, path, offset):
-        logging.info("inspecting blob for ls:" + path)
-
         for item in ['.', '..']:
             yield fuse.Direntry(item)
 
         blob = self._get_blob(path)
         if blob:
-            logging.info("found blob for ls:" + path)
-
             for sub in blob.subs():
-                logging.info("found sub: [" + sub + "]")
                 yield fuse.Direntry(str(sub))
 
             for action in self.ACTION_HOOKS:
-                logging.info("found action: " + action)
                 yield fuse.Direntry(action)
-        else:
-            logging.error("missed blob: " + path)
 
     def open(self, path, flags):
         blob_path, action_path = path.rsplit("/", 1)
