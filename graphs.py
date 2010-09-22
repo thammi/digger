@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 
-import Gnuplot
-
-from projects import *
 import svg
+from matplotlib.dates import date2num
 
 def aggre_count(commits, key):
     """Counting the occurences of aspects defined by a key"""
-
     counter = {}
     
     for commit in commits:
@@ -19,16 +16,17 @@ def aggre_count(commits, key):
 
     return counter
 
-def plot(data):
-    """Turning [(key, value), ...] into line graphs"""
+def line_plot(data, out):
+    """Turning ([key, ...], [value, ...]) into line graphs"""
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import pylab
 
-    g = Gnuplot.Gnuplot()
-    g('set style data lines')
-    #g('set style data linespoints')
-    #g('set xrange [0:23]')
-    g.plot(data)
+    pylab.clf()
 
-    raw_input()
+    pylab.plot_date(data[0], data[1], '-')
+
+    pylab.savefig(out)
 
 def punch_svg(data, out, size = (800, 300)):
     """Turning [((x, y), value), ...] into punchcards"""
@@ -53,7 +51,7 @@ def punch_svg(data, out, size = (800, 300)):
     root.add(card)
     card.translate((x_step, y_step))
 
-    # group containing the captions
+    # group containing the captions (relative to card)
     caption = svg.Group()
     card.add(caption)
     caption.style('fill', 'grey')
@@ -94,13 +92,21 @@ def punch_svg(data, out, size = (800, 300)):
 
     root.write(out)
 
-def main(argv):
-    b = Base()
+def _paint_curve(agg):
+    keys = agg.keys()
+    keys.sort()
 
-    data = b.commits()
-    #data = b.groups[25].commits()
+    values = [agg[key] for key in keys]
 
-    agg = aggre_count(data, lambda c: (c['date'][3], date_to_weekday(c['date'])))
+    data = (keys, values)
+    #data = values
+
+    f = file("out.png", "w")
+    line_plot(data, f)
+    f.close()
+
+def _paint_punchcard(commits):
+    agg = aggre_count(commits, lambda c: (c['date'][3], date_to_weekday(c['date'])))
 
     keys = agg.keys()
     data = [(key, agg[key]) for key in keys]
@@ -109,17 +115,20 @@ def main(argv):
     punch_svg(data, f)
     f.close()
 
-    #agg = aggre_count(b.commits(), lambda c: "%s.%s" % (c['date'][1], c['date'][2]))
-    #agg = aggre_count(b.commits(), lambda c: "%s.%s"%(date_to_weekday(c['date']),c['date'][3]))
+def _main(argv):
+    from git_stats import Base, date_to_weekday
+    from matplotlib.dates import date2num
+    from datetime import datetime
 
-    #keys = agg.keys()
-    #keys.sort()
+    b = Base()
 
-    #data = [(key, agg[key]) for key in keys]
+    data = b.commits()
+    #data = b.groups[25].commits()
 
-    #plot(data)
+    agg = aggre_count(data, lambda c: date2num(datetime(*c['date'][:3])))
+    _paint_curve(agg)
 
 if __name__ == '__main__':
     import sys
-    main(sys.argv[1:])
+    _main(sys.argv[1:])
 
