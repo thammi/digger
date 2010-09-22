@@ -12,6 +12,8 @@ from fuse import Fuse
 from StringIO import StringIO
 from datetime import datetime
 
+from datehelper import iso_to_gregorian
+
 from git_stats import *
 from graphs import *
 
@@ -64,6 +66,16 @@ def curve_day(blob):
     agg = aggre_count(commits, lambda c: date2num(datetime(*c['date'][:3])))
     return exec_curve(agg)
 
+def curve_week(blob):
+    def commit_to_week_num(commit):
+        week = date_to_week(commit['date'])
+        greg_date = iso_to_gregorian(*week)
+        return date2num(greg_date)
+
+    commits = blob.commits()
+    agg = aggre_count(commits, commit_to_week_num)
+    return exec_curve(agg)
+
 def week_punchcard(blob):
     commits = blob.commits()
     agg = aggre_count(commits, lambda c: (c['date'][3], date_to_weekday(c['date'])))
@@ -96,6 +108,7 @@ class ProjectFS(Fuse):
     ACTION_HOOKS = {
             'punch_week.svg': week_punchcard,
             'curve_day.png': curve_day,
+            'curve_week.png': curve_week,
             }
 
     def __init__(self, base, *args, **kw):
