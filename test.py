@@ -3,6 +3,9 @@
 from graphs import *
 from git_stats import Base, date_to_weekday
 from datetime import datetime
+import json
+import os.path
+import os
 
 def paint_curve(agg):
     keys = agg.keys()
@@ -44,7 +47,32 @@ def curve(argv):
     paint_curve(agg)
 
 def identica(argv):
-    pass
+    target_dir = "identica"
+
+    inp = file("raw_dents.json")
+    batch = json.load(inp)
+    inp.close()
+
+    for user, dents in batch.iteritems():
+        user_dir = os.path.join(target_dir, user)
+
+        if not os.path.exists(user_dir):
+            os.makedirs(user_dir)
+
+        # punchcard
+        def punch_date(dent):
+            strf = "%a %b %d %H:%M:%S +0000 %Y"
+            dt = datetime.strptime(dent['created_at'], strf)
+            return (dt.hour, dt.weekday())
+
+        agg = aggre_count(dents, punch_date)
+
+        keys = agg.keys()
+        data = [(key, agg[key]) for key in keys]
+
+        out = file(os.path.join(user_dir, "punch_week.svg"), 'w')
+        punch_svg(data, out)
+        out.close()
 
 def main(argv):
     actions = {
