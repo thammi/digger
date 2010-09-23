@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-from graphs import *
-from git_stats import Base, date_to_weekday
 from datetime import datetime
 import json
 import os.path
 import os
+
+from graphs import *
+from git_stats import Base, date_to_weekday
+from datehelper import iso_to_gregorian
 
 def paint_curve(agg):
     keys = agg.keys()
@@ -47,7 +49,7 @@ def curve(argv):
     paint_curve(agg)
 
 def identica(argv):
-    target_dir = "identica"
+    target_dir = "dentgraph"
 
     inp = file("raw_dents.json")
     batch = json.load(inp)
@@ -59,10 +61,13 @@ def identica(argv):
         if not os.path.exists(user_dir):
             os.makedirs(user_dir)
 
+        def identi_date(dent):
+            strf = "%a %b %d %H:%M:%S +0000 %Y"
+            return datetime.strptime(dent['created_at'], strf)
+
         # punchcard
         def punch_date(dent):
-            strf = "%a %b %d %H:%M:%S +0000 %Y"
-            dt = datetime.strptime(dent['created_at'], strf)
+            dt = identi_date(dent)
             return (dt.hour, dt.weekday())
 
         agg = aggre_count(dents, punch_date)
@@ -72,6 +77,23 @@ def identica(argv):
 
         out = file(os.path.join(user_dir, "punch_week.svg"), 'w')
         punch_svg(data, out)
+        out.close()
+
+        # week curve
+        def week_date(dent):
+            dt = identi_date(dent)
+            week = dt.isocalendar()[:2]
+            return date2num(iso_to_gregorian(*week))
+
+        agg = aggre_count(dents, week_date)
+
+        keys = agg.keys()
+        keys.sort()
+        values = [agg[key] for key in keys]
+        data = (keys, values)
+
+        out = file(os.path.join(user_dir, "curve_week.png"), 'w')
+        line_plot(data, out)
         out.close()
 
 def main(argv):
