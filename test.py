@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+import time
+import calendar
 import json
 import os.path
 import os
@@ -63,7 +65,9 @@ def identica(argv):
 
         def identi_date(dent):
             strf = "%a %b %d %H:%M:%S +0000 %Y"
-            return datetime.strptime(dent['created_at'], strf)
+            stime = time.strptime(dent['created_at'], strf)
+            stamp = calendar.timegm(stime)
+            return datetime.fromtimestamp(stamp)
 
         # punchcard
         def punch_date(dent):
