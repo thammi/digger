@@ -11,7 +11,7 @@ if env_var in os.environ:
 else:
     warn("No last.fm API key set, use " + env_var)
 
-def get_scrobbles(user, count=200, page=1, max_pages=10):
+def get_scrobbles(user, count=200, page=1, max_pages=50):
     print "Fetching page", page
 
     query = urllib.urlencode({
@@ -38,7 +38,7 @@ def get_scrobbles(user, count=200, page=1, max_pages=10):
         scrobbles = base['track']
         pages = int(base[u'@attr']['totalPages'])
 
-        if max_pages > 0 and page < pages:
+        if max_pages > 1 and page < pages:
             scrobbles.extend(get_scrobbles(user, count, page+1, max_pages-1))
 
         return scrobbles
