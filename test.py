@@ -50,28 +50,16 @@ def curve(argv):
     agg = aggre_count(data, lambda c: date2num(datetime(*c['date'][:3])))
     paint_curve(agg)
 
-def identica(argv):
-    target_dir = "dentgraph"
-
-    inp = file("raw_dents.json")
-    batch = json.load(inp)
-    inp.close()
-
+def batch_graphs(batch, target_dir, blob_to_date):
     for user, dents in batch.iteritems():
         user_dir = os.path.join(target_dir, user)
 
         if not os.path.exists(user_dir):
             os.makedirs(user_dir)
 
-        def identi_date(dent):
-            strf = "%a %b %d %H:%M:%S +0000 %Y"
-            stime = time.strptime(dent['created_at'], strf)
-            stamp = calendar.timegm(stime)
-            return datetime.fromtimestamp(stamp)
-
         # punchcard
         def punch_date(dent):
-            dt = identi_date(dent)
+            dt = blob_to_date(dent)
             return (dt.hour, dt.weekday())
 
         agg = aggre_count(dents, punch_date)
@@ -85,7 +73,7 @@ def identica(argv):
 
         # week curve
         def week_date(dent):
-            dt = identi_date(dent)
+            dt = blob_to_date(dent)
             week = dt.isocalendar()[:2]
             return date2num(iso_to_gregorian(*week))
 
@@ -99,6 +87,20 @@ def identica(argv):
         out = file(os.path.join(user_dir, "curve_week.png"), 'w')
         line_plot(data, out)
         out.close()
+
+def identi_date(dent):
+    strf = "%a %b %d %H:%M:%S +0000 %Y"
+    stime = time.strptime(dent['created_at'], strf)
+    stamp = calendar.timegm(stime)
+    return datetime.fromtimestamp(stamp)
+
+
+def identica(argv):
+    inp = file("raw_dents.json")
+    batch = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "dentgraph", identi_date)
 
 def main(argv):
     actions = {
