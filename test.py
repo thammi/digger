@@ -50,6 +50,16 @@ def curve(argv):
     agg = aggre_count(data, lambda c: date2num(datetime(*c['date'][:3])))
     paint_curve(agg)
 
+def agg_curve_file(agg, file_name):
+    keys = agg.keys()
+    keys.sort()
+    values = [agg[key] for key in keys]
+    data = (keys, values)
+
+    out = file(file_name, 'w')
+    line_plot(data, out)
+    out.close()
+
 def batch_graphs(batch, target_dir, blob_to_date):
     for user, dents in batch.iteritems():
         user_dir = os.path.join(target_dir, user)
@@ -79,14 +89,26 @@ def batch_graphs(batch, target_dir, blob_to_date):
 
         agg = aggre_count(dents, week_date)
 
-        keys = agg.keys()
-        keys.sort()
-        values = [agg[key] for key in keys]
-        data = (keys, values)
+        agg_curve_file(agg, os.path.join(user_dir, "curve_week.png"))
 
-        out = file(os.path.join(user_dir, "curve_week.png"), 'w')
-        line_plot(data, out)
-        out.close()
+        # daily curve
+        def day_date(dent):
+            dt = blob_to_date(dent)
+            return date2num(datetime(*dt.timetuple()[:3]))
+
+        agg = aggre_count(dents, day_date)
+
+        agg_curve_file(agg, os.path.join(user_dir, "curve_day.png"))
+
+        # monthly curve
+        def month_date(dent):
+            dt = blob_to_date(dent)
+            year, month = dt.timetuple()[:2]
+            return date2num(datetime(year, month, 1))
+
+        agg = aggre_count(dents, month_date)
+
+        agg_curve_file(agg, os.path.join(user_dir, "curve_month.png"))
 
 def identi_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
