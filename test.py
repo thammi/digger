@@ -102,11 +102,19 @@ def identica(argv):
 
     batch_graphs(batch, "dentgraph", identi_date)
 
+def lastfm(argv):
+    inp = file("raw_scrobbles.json")
+    batch = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "lastgraph", lambda s: datetime.fromtimestamp(int(s['date']['uts'])))
+
 def main(argv):
     actions = {
             'curve': curve,
             'punchcard': punchcard,
             'identica': identica,
+            'lastfm': lastfm,
             }
 
     if len(argv):
