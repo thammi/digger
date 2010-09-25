@@ -60,6 +60,14 @@ def agg_curve_file(agg, file_name):
     line_plot(data, out)
     out.close()
 
+def agg_punch_file(agg, file_name):
+    keys = agg.keys()
+    data = [(key, agg[key]) for key in keys]
+
+    out = file(file_name, 'w')
+    punch_svg(data, out)
+    out.close()
+
 def batch_graphs(batch, target_dir, blob_to_date):
     for user, dents in batch.iteritems():
         user_dir = os.path.join(target_dir, user)
@@ -74,12 +82,7 @@ def batch_graphs(batch, target_dir, blob_to_date):
 
         agg = aggre_count(dents, punch_date)
 
-        keys = agg.keys()
-        data = [(key, agg[key]) for key in keys]
-
-        out = file(os.path.join(user_dir, "punch_week.svg"), 'w')
-        punch_svg(data, out)
-        out.close()
+        agg_punch_file(agg, os.path.join(user_dir, "punch_week.svg"))
 
         # week curve
         def week_date(dent):
@@ -109,6 +112,23 @@ def batch_graphs(batch, target_dir, blob_to_date):
         agg = aggre_count(dents, month_date)
 
         agg_curve_file(agg, os.path.join(user_dir, "curve_month.png"))
+
+        # punchcard over single hour/day pairs
+        # aka hour/day pairs with activity (no matter how much)
+        def hour_day_date(dent):
+            dt = blob_to_date(dent)
+            return (dt.hour, dt.timetuple()[:3])
+
+        def hour_day_to_week(hd):
+            hour, date = hd
+            return (hour, datetime(*date).weekday())
+
+        # find hour/day tuples
+        day_agg = aggre_count(dents, hour_day_date)
+        # transform to hour/weekday tuples
+        week_agg = aggre_count(day_agg.keys(), hour_day_to_week)
+
+        agg_punch_file(week_agg, os.path.join(user_dir, "punch_week_single.svg"))
 
 def identi_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"

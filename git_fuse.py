@@ -81,6 +81,14 @@ def week_punchcard(blob):
     agg = aggre_count(commits, lambda c: (c['date'][3], date_to_weekday(c['date'])))
     return exec_svg(agg)
 
+def single_week_punchcard(blob):
+    commits = blob.commits()
+    # find hours/days
+    day_agg = aggre_count(commits, lambda c: (c['date'][3], tuple(c['date'][:3])))
+    # transform to hours/weekday
+    week_agg = aggre_count(day_agg, lambda (h, d): (h, date_to_weekday(d)))
+    return exec_svg(week_agg)
+
 class Cache:
 
     def __init__(self):
@@ -107,6 +115,7 @@ class ProjectFS(Fuse):
 
     ACTION_HOOKS = {
             'punch_week.svg': week_punchcard,
+            'punch_week_single.svg': single_week_punchcard,
             'curve_day.png': curve_day,
             'curve_week.png': curve_week,
             }
