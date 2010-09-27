@@ -4,7 +4,8 @@ import sys
 import json
 import urllib
 from warnings import warn
-import os.path
+
+from json_batch import save_batch
 
 def get_dents(user, count = 200, page = 1):
     print "Fetching page", page
@@ -30,27 +31,6 @@ def get_dents(user, count = 200, page = 1):
         print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
         return None
 
-def save_dents(user, dents, file_name="raw_dents.json"):
-    if os.path.exists(file_name):
-        # read in old dents
-        try:
-            inp = file(file_name)
-            batch = json.load(inp)
-            inp.close()
-        except:
-            warn("Couldn't load old dents")
-            batch = {}
-    else:
-        batch = {}
-
-    # insert new dents
-    batch[user] = dents
-
-    # writing back
-    out = file(file_name, "w")
-    json.dump(batch, out)
-    out.close()
-
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "Please specify at least one user id"
@@ -66,7 +46,7 @@ if __name__ == '__main__':
             if not dents:
                 print "ERROR: No results!"
             else:
-                save_dents(user, dents)
+                save_batch(user, dents, "raw_dents.json")
 
                 print "Amount of dents:  %i" % len(dents)
                 print

@@ -5,6 +5,8 @@ import json
 import urllib
 from warnings import warn
 
+from json_batch import save_batch
+
 env_var = 'LASTFM_KEY'
 if env_var in os.environ:
     API_KEY = os.environ[env_var]
@@ -47,28 +49,6 @@ def get_scrobbles(user, count=200, page=1, max_pages=100):
         print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
         return []
 
-# TODO: kill code duplication
-def save_scrobbles(user, scrobbles, file_name="raw_scrobbles.json"):
-    if os.path.exists(file_name):
-        # read in old dents
-        try:
-            inp = file(file_name)
-            batch = json.load(inp)
-            inp.close()
-        except:
-            warn("Couldn't load old scrobbles")
-            batch = {}
-    else:
-        batch = {}
-
-    # insert new dents
-    batch[user] = scrobbles
-
-    # writing back
-    out = file(file_name, "w")
-    json.dump(batch, out)
-    out.close()
-
 if __name__ == '__main__':
     import sys
 
@@ -86,7 +66,7 @@ if __name__ == '__main__':
             if not dents:
                 print "ERROR: No results!"
             else:
-                save_scrobbles(user, dents)
+                save_batch(user, dents, "raw_scrobbles.json")
 
                 print "Amount of dents:  %i" % len(dents)
                 print
