@@ -19,9 +19,9 @@ for s in f:
     s = s.strip("\n")
     if s.find("core") != -1:
         timeblob = re.match(DATEREG, s)
-        if s.find("+v"):
+        if s.find("+v") or s.find("has joined"):
             json.dump({'nick' : NICK, 'time' : timeblob.group(0), 'action' : 'online'}, g)
-        elif s.find("-v"):
+        elif s.find("-v") or s.find("has quit"):
             json.dump({'nick' : NICK, 'time' : timeblob.group(0), 'action' : 'offline'}, g)
         i += 1
 f.close
