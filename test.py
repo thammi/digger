@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from datetime import datetime
+from datetime import datetime, date
 import time
 import calendar
 import json
@@ -129,6 +129,17 @@ def batch_graphs(batch, target_dir, blob_to_date):
         week_agg = aggre_count(day_agg.keys(), hour_day_to_week)
 
         agg_punch_file(week_agg, os.path.join(user_dir, "punch_week_single.svg"))
+
+        # 2d graph
+        def date_hour(dent):
+            dt = blob_to_date(dent)
+            return (dt.date(), dt.hour)
+
+        data = aggre_count(dents, date_hour).iterkeys()
+
+        f = file(os.path.join(user_dir, "roll.png"), 'w')
+        roll_date_time(data, f)
+        f.close()
 
 def identi_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
