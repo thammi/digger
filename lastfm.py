@@ -14,7 +14,9 @@ else:
     API_KEY = ''
     warn("No last.fm API key set, use " + env_var)
 
-def get_scrobbles(user, count=200, page=1, max_pages=100):
+# TODO: poor stack ...
+# TODO: we are missing tracks if the user is scrobbling while we fetch
+def get_scrobbles(user, count=200, page=1, max_pages=100, tries=3):
     print "Fetching page", page
 
     query = urllib.urlencode({
@@ -28,7 +30,17 @@ def get_scrobbles(user, count=200, page=1, max_pages=100):
 
     base_url = "http://ws.audioscrobbler.com/2.0/"
 
-    res = urllib.urlopen("%s?%s" % (base_url, query))
+    try:
+        res = urllib.urlopen("%s?%s" % (base_url, query))
+    except:
+        warn("Exception while fetching the page")
+        if tries > 1:
+            # retry
+            return get_scrobbles(user, count, page, max_pages, tries-1)
+        else:
+            # give up
+            warn("No more tries left, aborting")
+            return []
 
     if res.getcode() < 300:
         raw = json.load(res)
