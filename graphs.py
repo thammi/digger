@@ -2,6 +2,8 @@
 
 import svg
 from matplotlib.dates import date2num
+import Image
+from datetime import date
 
 def aggre_count(commits, key):
     """Counting the occurences of aspects defined by a key"""
@@ -15,6 +17,25 @@ def aggre_count(commits, key):
             counter[value] = 1
 
     return counter
+
+def roll_date_time(data, out):
+    epoch = date(1970, 1, 1)
+    time_date = [((cdate - epoch).days, hour) for cdate, hour in data]
+    roll_plot(time_date, 24, out)
+
+def roll_plot(data, height, out):
+    bg_color = (255, 255, 255)
+    color=(32,32,255)
+
+    start = min(x for x, y in data)
+    end = max(x for x, y in data)
+
+    img = Image.new("RGB", (end - start + 1, height), bg_color)
+
+    for x, y in data:
+        img.putpixel((x - start, height - y - 1), color)
+
+    img.save(out, 'png')
 
 def line_plot(data, out):
     """Turning ([key, ...], [value, ...]) into line graphs"""
