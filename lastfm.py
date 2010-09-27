@@ -32,7 +32,7 @@ def get_scrobbles(user, count=200, page=1, max_pages=100, tries=3):
 
     try:
         res = urllib.urlopen("%s?%s" % (base_url, query))
-    except:
+    except IOError:
         warn("Exception while fetching the page")
         if tries > 1:
             # retry
