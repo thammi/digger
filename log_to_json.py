@@ -20,8 +20,9 @@ for s in f:
     if s.find("core") != -1:
         timeblob = re.match(DATEREG, s)
         if s.find("+v"):
-            json.dump({'nick' : NICK, 'time' : timeblob.group(0), 'action' : '+v'}, g)
-
+            json.dump({'nick' : NICK, 'time' : timeblob.group(0), 'action' : 'online'}, g)
+        elif s.find("-v"):
+            json.dump({'nick' : NICK, 'time' : timeblob.group(0), 'action' : 'offline'}, g)
         i += 1
 f.close
 
