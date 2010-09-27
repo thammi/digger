@@ -68,6 +68,6 @@ if __name__ == '__main__':
             else:
                 save_batch(user, dents, "raw_scrobbles.json")
 
-                print "Amount of dents:  %i" % len(dents)
+                print "Amount of scrobbles:  %i" % len(dents)
                 print
 
