@@ -9,9 +9,10 @@ env_var = 'LASTFM_KEY'
 if env_var in os.environ:
     API_KEY = os.environ[env_var]
 else:
+    API_KEY = ''
     warn("No last.fm API key set, use " + env_var)
 
-def get_scrobbles(user, count=200, page=1, max_pages=50):
+def get_scrobbles(user, count=200, page=1, max_pages=100):
     print "Fetching page", page
 
     query = urllib.urlencode({
