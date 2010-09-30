@@ -144,7 +144,7 @@ def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
         roll_date_time(data, f)
         f.close()
 
-def identi_date(dent):
+def microblogging_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
     stime = time.strptime(dent['created_at'], strf)
     stamp = calendar.timegm(stime)
@@ -152,11 +152,18 @@ def identi_date(dent):
 
 
 def identica(argv):
-    inp = file("raw_dents.json")
+    inp = file("raw_updates_identica.json")
     batch = json.load(inp)
     inp.close()
 
-    batch_graphs(batch, "dentgraph", identi_date)
+    batch_graphs(batch, "dentgraph", microblogging_date)
+
+def twitter(argv):
+    inp = file("raw_updates_twitter.json")
+    batch = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "twitgraph", microblogging_date)
 
 def lastfm(argv):
     inp = file("raw_scrobbles.json")
@@ -176,6 +183,7 @@ def main(argv):
             'curve': curve,
             'punchcard': punchcard,
             'identica': identica,
+            'twitter' : twitter,
             'lastfm': lastfm,
             }
 
