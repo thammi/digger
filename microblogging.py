@@ -9,7 +9,6 @@ from json_batch import save_batch
 
 def get_updates(service, user, count = 200, page = 1, updatescount = -1):
     if service in ["identica", "twitter"]:
-        print "Fetching page %i, %i updates remaining" % (page, updatescount)
 
         base_url = { 'identica' : "http://identi.ca/api/",
                      'twitter' : "http://api.twitter.com/1/",
@@ -20,12 +19,14 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
             query = urllib.urlencode({
                     'id': user
                     })
-
+            
             res = urllib.urlopen("%susers/show.json?%s" % (base_url[service], query))
 
             userdata = json.load(res)
 
             updatescount = userdata['statuses_count']
+
+        print "Fetching page %i, %i updates remaining" % (page, updatescount)
 
         if updatescount < 200:
             count = updatescount
@@ -33,7 +34,8 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
         query = urllib.urlencode({
                 'page': page,
                 'count': count,
-                'id': user
+                'id': user,
+                'include_rts': "true" #get all 200 tweets from twitter
                 })
 
         res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_url[service], query))
@@ -41,14 +43,18 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
         if res.getcode() < 300:
             updates = json.load(res)
             
-            if len(updates) == count:
+            #print "Got %i updates" % len(updates)
+
+            if len(updates) > 0:
                 if (updatescount - count > 0):
                     updates.extend(get_updates(service, user, count, page + 1, updatescount - count))
                 
                 return updates
             else:
-                print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
-                return None
+                #print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
+                print "Unable to fetch more tweets"
+                #return None
+                return []
 
     else:
         print "please specify correct service (identica or twitter)"
