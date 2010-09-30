@@ -2,6 +2,7 @@
 
 import sys
 import json
+import re
 import urllib
 from warnings import warn
 
@@ -39,6 +40,12 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
                 })
 
         res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_url[service], query))
+
+        if service == "twitter":
+            #watch rate limit
+            ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
+            if ratelimit != None:
+                print "remaining API-calls: %s" % ratelimit.group(1)
 
         if res.getcode() < 300:
             updates = json.load(res)
