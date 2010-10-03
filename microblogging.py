@@ -8,64 +8,89 @@ from warnings import warn
 
 from json_batch import save_batch
 
-def get_updates(service, user, count = 200, page = 1, updatescount = -1):
+class UnknownServiceException(Exception):
+
+    def __init__(self, service):
+        self.service = service
+
+    def __str__(self):
+        return self.service
+
+class ServiceFailedException(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return msg
+
+def api_call(method, options):
     base_urls = {
             'identica' : "http://identi.ca/api/",
             'twitter' : "http://api.twitter.com/1/",
             }
 
-    if service in base_urls:
-        if updatescount == -1:
+    if service not in base_urls:
+        raise UnknownServiceException(service)
 
-            query = urllib.urlencode({
-                    'id': user
-                    })
-            
-            res = urllib.urlopen("%susers/show.json?%s" % (base_urls[service], query))
+    url_parts = {
+            'query': urllib.urlencode(options),
+            'base_url': base_urls[service],
+            'method': method,
+            }
 
-            userdata = json.load(res)
+    res = urllib.urlopen("{base_url}{method}.json?{query}".format(**url_parts))
 
-            updatescount = userdata['statuses_count']
+    #if service == "twitter":
+        ##watch rate limit
+        #ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
+        #if ratelimit != None:
+            #print "remaining API-calls: %s" % ratelimit.group(1)
 
-        print "Fetching page %i, %i updates remaining" % (page, updatescount)
-
-        if updatescount < 200:
-            count = updatescount
-
-        query = urllib.urlencode({
-                'page': page,
-                'count': count,
-                'id': user,
-                'include_rts': 'true', #get all 200 tweets from twitter
-                })
-
-        res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_urls[service], query))
-
-        if service == "twitter":
-            #watch rate limit
-            ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
-            if ratelimit != None:
-                print "remaining API-calls: %s" % ratelimit.group(1)
-
-        if res.getcode() < 300:
-            updates = json.load(res)
-            
-            #print "Got %i updates" % len(updates)
-
-            if len(updates) > 0:
-                if (updatescount - count > 0):
-                    updates.extend(get_updates(service, user, count, page + 1, updatescount - count))
-                
-                return updates
-            else:
-                #print "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
-                print "Unable to fetch more tweets"
-                #return None
-                return []
-
+    if res.getcode() < 300:
+        return json.load(res)
     else:
-        print "please specify an implemented service: " + ", ".join(base_urls.keys())
-        return None
+        msg = "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
+        raise ServiceFailedException(msg)
+        
+
+def get_page(service, user, count, page):
+    options = {
+            'page': page,
+            'count': count,
+            'id': user,
+            'include_rts': 'true', #get all 200 tweets from twitter
+            }
+
+    return api_call('statuses/user_timeline', options)
+
+def get_statuses(service, user):
+    step = 200
+    page = 1
+    statuses = []
+
+    # how many dents are there?
+    count = api_call('users/show', {'id': user})['statuses_count']
+
+    while count:
+        print "Fetching page %i, %i updates remaining" % (page, count)
+
+        # how many statuses to fetch?
+        fetch_count = min(step, count)
+
+        # fetch them
+        new_statuses = get_page(service, user, fetch_count, page)
+
+        # update the count
+        count -= len(new_statuses)
+
+        # save the statuses
+        statuses.extend(new_statuses)
+
+        # next page
+        page += 1
+
+    return statuses
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
@@ -78,7 +103,7 @@ if __name__ == '__main__':
         for user in users:
             print "===> Fetching %s on %s" % (user, service)
 
-            updates = get_updates(service, user)
+            updates = get_statuses(service, user)
 
             if not updates:
                 print "ERROR: No results!"
