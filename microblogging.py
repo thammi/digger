@@ -22,7 +22,7 @@ class ServiceFailedException(Exception):
         self.msg = msg
 
     def __str__(self):
-        return msg
+        return self.msg
 
 def api_call(method, options):
     base_urls = {
@@ -41,16 +41,15 @@ def api_call(method, options):
 
     res = urllib.urlopen("{base_url}{method}.json?{query}".format(**url_parts))
 
-    #if service == "twitter":
-        ##watch rate limit
-        #ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
-        #if ratelimit != None:
-            #print "remaining API-calls: %s" % ratelimit.group(1)
+    # watch rate limit (twitter only)
+    ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
+    if ratelimit != None:
+        print "remaining API-calls: %s" % ratelimit.group(1)
 
     if res.getcode() < 300:
         return json.load(res)
     else:
-        msg = "Unable to fetch: %i '%s'" % (res.getcode(), res.info())
+        msg = "Unable to fetch: %i" % res.getcode()
         raise ServiceFailedException(msg)
         
 
