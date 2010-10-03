@@ -9,19 +9,19 @@ from warnings import warn
 from json_batch import save_batch
 
 def get_updates(service, user, count = 200, page = 1, updatescount = -1):
-    if service in ["identica", "twitter"]:
+    base_urls = {
+            'identica' : "http://identi.ca/api/",
+            'twitter' : "http://api.twitter.com/1/",
+            }
 
-        base_url = { 'identica' : "http://identi.ca/api/",
-                     'twitter' : "http://api.twitter.com/1/",
-                     }
-
+    if service in base_urls:
         if updatescount == -1:
 
             query = urllib.urlencode({
                     'id': user
                     })
             
-            res = urllib.urlopen("%susers/show.json?%s" % (base_url[service], query))
+            res = urllib.urlopen("%susers/show.json?%s" % (base_urls[service], query))
 
             userdata = json.load(res)
 
@@ -36,7 +36,7 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
                 'page': page,
                 'count': count,
                 'id': user,
-                'include_rts': "true" #get all 200 tweets from twitter
+                'include_rts': 'true', #get all 200 tweets from twitter
                 })
 
         res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_url[service], query))
@@ -64,7 +64,7 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
                 return []
 
     else:
-        print "please specify correct service (identica or twitter)"
+        print "please specify an implemented service: " + ", ".join(base_urls.keys())
         return None
 
 if __name__ == '__main__':
