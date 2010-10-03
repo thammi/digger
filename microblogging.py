@@ -39,7 +39,7 @@ def get_updates(service, user, count = 200, page = 1, updatescount = -1):
                 'include_rts': 'true', #get all 200 tweets from twitter
                 })
 
-        res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_url[service], query))
+        res = urllib.urlopen("%sstatuses/user_timeline.json?%s" % (base_urls[service], query))
 
         if service == "twitter":
             #watch rate limit
