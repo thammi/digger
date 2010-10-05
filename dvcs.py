@@ -4,16 +4,16 @@ from mercurial import hg, ui
 
 from dulwich.repo import Repo
 
-from os.path import join, split, exists, isdir, abspath
+from os.path import join, split, exists, isdir, islink, abspath
 from os import listdir
 
 def import_dir(path):
     if exists(join(path, '.git')):
         # repo found
-        return {split(abspath(path))[1]: import_git(path)}
+        return build_structure(path, import_git)
     if exists(join(path, '.hg')):
         # repo found
-        return {split(abspath(path))[1]: import_hg(path)}
+        return build_structure(path, import_hg)
     else:
         # keep searching
         found = {}
@@ -21,10 +21,14 @@ def import_dir(path):
         for file_name in listdir(path):
             file_path = join(path, file_name)
 
-            if isdir(file_path):
+            if isdir(file_path) and not islink(file_path):
                 found.update(import_dir(file_path))
 
         return found
+
+def build_structure(path, fun):
+    print path
+    return {split(abspath(path))[1]: fun(path)}
 
 def import_hg(path):
     repo = hg.repository(ui.ui(), path)
@@ -74,14 +78,17 @@ if __name__ == '__main__':
         print "Please specify a path"
         sys.exit(1)
     else:
-        path = sys.argv[1]
+        paths = sys.argv[1:]
 
-        repo_commits = import_dir(path)
+        commits = {}
 
-        if not repo_commits:
+        for path in paths:
+            commits.update(import_dir(path))
+
+        if not commits:
             print "ERROR: No results!"
         else:
-            update_batch(repo_commits, "raw_dvcs.json")
+            update_batch(commits, "raw_dvcs.json")
 
-            print "Found repositories: " + ', '.join(repo_commits.keys())
+            print "Found repositories: " + ', '.join(sorted(commits.keys()))
 
