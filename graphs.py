@@ -3,7 +3,8 @@
 import svg
 from matplotlib.dates import date2num
 import Image
-from datetime import date
+from ImageDraw import Draw
+from datetime import date, datetime
 
 def aggre_count(commits, key):
     """Counting the occurences of aspects defined by a key"""
@@ -18,22 +19,60 @@ def aggre_count(commits, key):
 
     return counter
 
-def roll_date_time(data, out):
-    epoch = date(1970, 1, 1)
-    time_date = [((cdate - epoch).days, hour) for cdate, hour in data]
-    roll_plot(time_date, 24, out)
+def iter_months(start, end):
+    for year in xrange(start.year, end.year + 1):
+        start_month = start.month + 1 if start.year == year else 1
 
-def roll_plot(data, height, out):
+        for month in range(start_month, 12 + 1):
+            if end.year == year and month > end.month:
+                break
+
+            yield datetime(year, month, 1)
+
+def roll_date_time(data, out, hour_parts=4, lines=4):
     bg_color = (255, 255, 255)
+    line_color = (220, 220, 220)
     color=(32,32,255)
 
-    start = min(x for x, y in data)
-    end = max(x for x, y in data)
+    def date_value(event):
+        return (event.date() - epoch).days
 
-    img = Image.new("RGB", (end - start + 1, height), bg_color)
+    def date_coords(event):
+        time_value = event.hour * hour_parts + event.minute * hour_parts / 60
+        return (date_value(event) - start_value, height - time_value - 1)
 
-    for x, y in data:
-        img.putpixel((x - start, height - y - 1), color)
+    epoch = date(1970, 1, 1)
+
+    # find boundarys
+    start = min(data)
+    end = max(data)
+
+    # calculate value of boundarys
+    start_value = date_value(start)
+    end_value = date_value(end)
+
+    # calculate geometry
+    width = end_value - start_value + 1
+    height = 24 * hour_parts
+
+    # building the image
+    img = Image.new("RGB", (width, height + 10), bg_color)
+    draw = Draw(img)
+
+    # drawing horizontal (time) lines to enhance readability
+    for line in xrange(lines):
+        y = (height / lines) * (line + 1)
+        draw.line([(0, y), (width - 1, y)], line_color)
+
+    # drawing vertical (date) lines and captions
+    for month_start in iter_months(start, end):
+        x, _ = date_coords(month_start)
+        draw.line([(x, 0), (x, height - 1)], line_color)
+        draw.text((x + 3, height), month_start.strftime("%m"), line_color)
+
+    # plotting actual data
+    for event in data:
+        img.putpixel(date_coords(event), color)
 
     img.save(out, 'png')
 
