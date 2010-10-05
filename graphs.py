@@ -3,7 +3,8 @@
 import svg
 from matplotlib.dates import date2num
 import Image
-from datetime import date
+from ImageDraw import Draw
+from datetime import date, datetime
 
 def aggre_count(commits, key):
     """Counting the occurences of aspects defined by a key"""
@@ -17,6 +18,16 @@ def aggre_count(commits, key):
             counter[value] = 1
 
     return counter
+
+def iter_months(start, end):
+    for year in xrange(start.year, end.year + 1):
+        start_month = start.month + 1 if start.year == year else 1
+
+        for month in range(start_month, 12 + 1):
+            if end.year == year and month > end.month:
+                break
+
+            yield datetime(year, month, 1)
 
 def roll_date_time(data, out, hour_parts=4, lines=4):
     bg_color = (255, 255, 255)
@@ -46,12 +57,16 @@ def roll_date_time(data, out, hour_parts=4, lines=4):
 
     # building the image
     img = Image.new("RGB", (width, height), bg_color)
+    draw = Draw(img)
 
     # drawing horizontal (time) lines to enhance readability
     for line in xrange(1, lines):
         y = (height / lines) * line
-        for x in xrange(width):
-            img.putpixel((x, y), line_color)
+        draw.line([(0, y), (width - 1, y)], line_color)
+
+    for month_start in iter_months(start, end):
+        x, _ = date_coords(month_start)
+        draw.line([(x, 0), (x, height - 1)], line_color)
 
     # plotting actual data
     for event in data:
