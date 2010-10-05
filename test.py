@@ -152,6 +152,7 @@ def microblogging_date(dent):
 
 def log_date(entry):
     strf = "%Y-%m-%d %H:%M:%S"
+
     stime = time.strptime(entry['time'], strf)
     stamp = calendar.timegm(stime)
     return datetime.fromtimestamp(stamp)
@@ -159,11 +160,18 @@ def log_date(entry):
 
 def log(argv):
     inp = file("raw_log.json")
+
+    def online_filter(entry):
+        if entry['action'] == "online":
+            return True
+        else:
+            return False
+
     batch = {}
     batch['core'] = json.load(inp)
     inp.close()
 
-    batch_graphs(batch, "loggraph", log_date)
+    batch_graphs(batch, "loggraph", log_date, online_filter)
 
 def identica(argv):
     inp = file("raw_updates_identica.json")
