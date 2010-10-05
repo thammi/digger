@@ -18,22 +18,44 @@ def aggre_count(commits, key):
 
     return counter
 
-def roll_date_time(data, out):
-    epoch = date(1970, 1, 1)
-    time_date = [((cdate - epoch).days, hour) for cdate, hour in data]
-    roll_plot(time_date, 24, out)
-
-def roll_plot(data, height, out):
+def roll_date_time(data, out, hour_parts=4, lines=4):
     bg_color = (255, 255, 255)
+    line_color = (220, 220, 220)
     color=(32,32,255)
 
-    start = min(x for x, y in data)
-    end = max(x for x, y in data)
+    def date_value(event):
+        return (event.date() - epoch).days
 
-    img = Image.new("RGB", (end - start + 1, height), bg_color)
+    def date_coords(event):
+        time_value = event.hour * hour_parts + event.minute * hour_parts / 60
+        return (date_value(event) - start_value, height - time_value - 1)
 
-    for x, y in data:
-        img.putpixel((x - start, height - y - 1), color)
+    epoch = date(1970, 1, 1)
+
+    # find boundarys
+    start = min(data)
+    end = max(data)
+
+    # calculate value of boundarys
+    start_value = date_value(start)
+    end_value = date_value(end)
+
+    # calculate geometry
+    width = end_value - start_value + 1
+    height = 24 * hour_parts
+
+    # building the image
+    img = Image.new("RGB", (width, height), bg_color)
+
+    # drawing horizontal (time) lines to enhance readability
+    for line in xrange(1, lines):
+        y = (height / lines) * line
+        for x in xrange(width):
+            img.putpixel((x, y), line_color)
+
+    # plotting actual data
+    for event in data:
+        img.putpixel(date_coords(event), color)
 
     img.save(out, 'png')
 

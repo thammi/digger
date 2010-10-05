@@ -133,12 +133,7 @@ def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
 
         agg_punch_file(week_agg, os.path.join(user_dir, "punch_week_single.svg"))
 
-        # 2d graph
-        def date_hour(item):
-            dt = blob_to_date(item)
-            return (dt.date(), dt.hour)
-
-        data = aggre_count(data, date_hour).iterkeys()
+        data = aggre_count(data, blob_to_date).keys()
 
         f = file(os.path.join(user_dir, "roll.png"), 'w')
         roll_date_time(data, f)
