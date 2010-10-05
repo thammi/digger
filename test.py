@@ -196,8 +196,8 @@ def twitter(argv):
 
     batch_graphs(batch, "twitgraph", microblogging_date)
 
-def git(argv):
-    inp = file("raw_git.json")
+def dvcs(argv):
+    inp = file("raw_dvcs.json")
     batch = json.load(inp)
     inp.close()
 
@@ -223,7 +223,7 @@ def main(argv):
             'identica': identica,
             'twitter' : twitter,
             'lastfm': lastfm,
-            'git': git,
+            'dvcs': dvcs,
             'log' : log,
             'github' : github,
             }

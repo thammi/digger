@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
+from mercurial import hg, ui
+
 from dulwich.repo import Repo
-from os.path import join, split, exists, isdir
+
+from os.path import join, split, exists, isdir, abspath
 from os import listdir
 
 def import_dir(path):
     if exists(join(path, '.git')):
         # repo found
-        return {split(path)[1]: import_repo(path)}
+        return {split(abspath(path))[1]: import_git(path)}
+    if exists(join(path, '.hg')):
+        # repo found
+        return {split(abspath(path))[1]: import_hg(path)}
     else:
         # keep searching
         found = {}
@@ -19,6 +25,19 @@ def import_dir(path):
                 found.update(import_dir(file_path))
 
         return found
+
+def import_hg(path):
+    repo = hg.repository(ui.ui(), path)
+    commits = []
+
+    for revision in repo:
+        commit = repo[revision]
+        commits.append({
+            'committer': commit.user(),
+            'time': commit.date()[0]
+            })
+
+    return commits
 
 def commit_iterator(repo):
     walker = repo.get_graph_walker()
@@ -34,7 +53,7 @@ def commit_iterator(repo):
             # we are done here
             break
 
-def import_repo(path):
+def import_git(path):
     repo = Repo(path)
     commits = []
 
@@ -62,7 +81,7 @@ if __name__ == '__main__':
         if not repo_commits:
             print "ERROR: No results!"
         else:
-            update_batch(repo_commits, "raw_git.json")
+            update_batch(repo_commits, "raw_dvcs.json")
 
             print "Found repositories: " + ', '.join(repo_commits.keys())
 
