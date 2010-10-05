@@ -150,6 +150,20 @@ def microblogging_date(dent):
     stamp = calendar.timegm(stime)
     return datetime.fromtimestamp(stamp)
 
+def log_date(entry):
+    strf = "%Y-%m-%d %H:%M:%S"
+    stime = time.strptime(entry['time'], strf)
+    stamp = calendar.timegm(stime)
+    return datetime.fromtimestamp(stamp)
+
+
+def log(argv):
+    inp = file("raw_log.json")
+    batch = {}
+    batch['core'] = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "loggraph", log_date)
 
 def identica(argv):
     inp = file("raw_updates_identica.json")
@@ -185,6 +199,7 @@ def main(argv):
             'identica': identica,
             'twitter' : twitter,
             'lastfm': lastfm,
+            'log' : log,
             }
 
     if len(argv):
