@@ -68,76 +68,78 @@ def agg_punch_file(agg, file_name):
     punch_svg(data, out)
     out.close()
 
+def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
+    if blob_filter:
+        data = filter(blob_filter, data)
+
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    # punchcard
+    def punch_date(item):
+        dt = blob_to_date(item)
+        return (dt.hour, dt.weekday())
+
+    agg = aggre_count(data, punch_date)
+
+    agg_punch_file(agg, os.path.join(target_dir, "punch_week.svg"))
+
+    # week curve
+    def week_date(item):
+        dt = blob_to_date(item)
+        week = dt.isocalendar()[:2]
+        return date2num(iso_to_gregorian(*week))
+
+    agg = aggre_count(data, week_date)
+
+    agg_curve_file(agg, os.path.join(target_dir, "curve_week.png"))
+
+    # daily curve
+    def day_date(item):
+        dt = blob_to_date(item)
+        return date2num(datetime(*dt.timetuple()[:3]))
+
+    agg = aggre_count(data, day_date)
+
+    agg_curve_file(agg, os.path.join(target_dir, "curve_day.png"))
+
+    # monthly curve
+    def month_date(item):
+        dt = blob_to_date(item)
+        year, month = dt.timetuple()[:2]
+        return date2num(datetime(year, month, 1))
+
+    agg = aggre_count(data, month_date)
+
+    agg_curve_file(agg, os.path.join(target_dir, "curve_month.png"))
+
+    # punchcard over single hour/day pairs
+    # aka hour/day pairs with activity (no matter how much)
+    def hour_day_date(item):
+        dt = blob_to_date(item)
+        return (dt.hour, dt.timetuple()[:3])
+
+    def hour_day_to_week(hd):
+        hour, date = hd
+        return (hour, datetime(*date).weekday())
+
+    # find hour/day tuples
+    day_agg = aggre_count(data, hour_day_date)
+    # transform to hour/weekday tuples
+    week_agg = aggre_count(day_agg.keys(), hour_day_to_week)
+
+    agg_punch_file(week_agg, os.path.join(target_dir, "punch_week_single.svg"))
+
+    data = aggre_count(data, blob_to_date).keys()
+
+    f = file(os.path.join(target_dir, "roll.png"), 'w')
+    roll_date_time(data, f)
+    f.close()
+
 def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
-    for user, data in batch.iteritems():
-        user_dir = os.path.join(target_dir, user)
-
-        if blob_filter:
-            data = filter(blob_filter, data)
-
-        if not os.path.exists(user_dir):
-            os.makedirs(user_dir)
-
-        # punchcard
-        def punch_date(item):
-            dt = blob_to_date(item)
-            return (dt.hour, dt.weekday())
-
-        agg = aggre_count(data, punch_date)
-
-        agg_punch_file(agg, os.path.join(user_dir, "punch_week.svg"))
-
-        # week curve
-        def week_date(item):
-            dt = blob_to_date(item)
-            week = dt.isocalendar()[:2]
-            return date2num(iso_to_gregorian(*week))
-
-        agg = aggre_count(data, week_date)
-
-        agg_curve_file(agg, os.path.join(user_dir, "curve_week.png"))
-
-        # daily curve
-        def day_date(item):
-            dt = blob_to_date(item)
-            return date2num(datetime(*dt.timetuple()[:3]))
-
-        agg = aggre_count(data, day_date)
-
-        agg_curve_file(agg, os.path.join(user_dir, "curve_day.png"))
-
-        # monthly curve
-        def month_date(item):
-            dt = blob_to_date(item)
-            year, month = dt.timetuple()[:2]
-            return date2num(datetime(year, month, 1))
-
-        agg = aggre_count(data, month_date)
-
-        agg_curve_file(agg, os.path.join(user_dir, "curve_month.png"))
-
-        # punchcard over single hour/day pairs
-        # aka hour/day pairs with activity (no matter how much)
-        def hour_day_date(item):
-            dt = blob_to_date(item)
-            return (dt.hour, dt.timetuple()[:3])
-
-        def hour_day_to_week(hd):
-            hour, date = hd
-            return (hour, datetime(*date).weekday())
-
-        # find hour/day tuples
-        day_agg = aggre_count(data, hour_day_date)
-        # transform to hour/weekday tuples
-        week_agg = aggre_count(day_agg.keys(), hour_day_to_week)
-
-        agg_punch_file(week_agg, os.path.join(user_dir, "punch_week_single.svg"))
-
-        data = aggre_count(data, blob_to_date).keys()
-
-        f = file(os.path.join(user_dir, "roll.png"), 'w')
-        roll_date_time(data, f)
-        f.close()
+    for name, data in batch.iteritems():
+        item_dir = os.path.join(target_dir, name)
+        blob_graph(data, item_dir, blob_to_date, blob_filter)
 
 def microblogging_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
@@ -160,6 +162,13 @@ def twitter(argv):
 
     batch_graphs(batch, "twitgraph", microblogging_date)
 
+def git(argv):
+    inp = file("raw_git.json")
+    batch = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "gitgraph", lambda c: datetime.fromtimestamp(c['time']))
+
 def lastfm(argv):
     inp = file("raw_scrobbles.json")
     batch = json.load(inp)
@@ -180,6 +189,7 @@ def main(argv):
             'identica': identica,
             'twitter' : twitter,
             'lastfm': lastfm,
+            'git': git,
             }
 
     if len(argv):
