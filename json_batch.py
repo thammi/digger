@@ -2,7 +2,7 @@ import json
 from warnings import warn
 import os.path
 
-def save_batch(item, data, file_name):
+def change_batch(change, file_name):
     if os.path.exists(file_name):
         # read in old data
         try:
@@ -15,10 +15,20 @@ def save_batch(item, data, file_name):
     else:
         batch = {}
 
-    # insert new data
-    batch[item] = data
+    # apply changes
+    change(batch)
 
     # writing back
     out = file(file_name, 'w')
     json.dump(batch, out)
     out.close()
+
+def update_batch(update, file_name):
+    change_batch(lambda batch: batch.update(update), file_name)
+
+def save_batch(item, data, file_name):
+    def save(batch):
+        batch[item] = data
+
+    change_batch(save, file_name)
+
