@@ -147,6 +147,40 @@ def microblogging_date(dent):
     stamp = calendar.timegm(stime)
     return datetime.fromtimestamp(stamp)
 
+def log_date(entry):
+    strf = "%Y-%m-%d %H:%M:%S"
+    stime = time.strptime(entry['time'], strf)
+    stamp = calendar.timegm(stime)
+    return datetime.fromtimestamp(stamp)
+
+def github_date(commit):
+    strf = "%Y-%m-%dT%H:%M:%S-07:00"
+    stime = time.strptime(commit['committed_date'], strf)
+    stamp = calendar.timegm(stime) + 7*60*60 # fixing github timezone
+    return datetime.fromtimestamp(stamp)
+
+def github(argv):
+    inp = file("raw_github_commits.json")
+    batch = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "githubgraph", github_date)
+
+
+def log(argv):
+    inp = file("raw_log.json")
+
+    def online_filter(entry):
+        if entry['action'] == "online":
+            return True
+        else:
+            return False
+
+    batch = {}
+    batch['core'] = json.load(inp)
+    inp.close()
+
+    batch_graphs(batch, "loggraph", log_date, online_filter)
 
 def identica(argv):
     inp = file("raw_updates_identica.json")
@@ -190,6 +224,8 @@ def main(argv):
             'twitter' : twitter,
             'lastfm': lastfm,
             'git': git,
+            'log' : log,
+            'github' : github,
             }
 
     if len(argv):
