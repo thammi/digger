@@ -56,17 +56,19 @@ def roll_date_time(data, out, hour_parts=4, lines=4):
     height = 24 * hour_parts
 
     # building the image
-    img = Image.new("RGB", (width, height), bg_color)
+    img = Image.new("RGB", (width, height + 10), bg_color)
     draw = Draw(img)
 
     # drawing horizontal (time) lines to enhance readability
-    for line in xrange(1, lines):
-        y = (height / lines) * line
+    for line in xrange(lines):
+        y = (height / lines) * (line + 1)
         draw.line([(0, y), (width - 1, y)], line_color)
 
+    # drawing vertical (date) lines and captions
     for month_start in iter_months(start, end):
         x, _ = date_coords(month_start)
         draw.line([(x, 0), (x, height - 1)], line_color)
+        draw.text((x + 3, height), month_start.strftime("%m"), line_color)
 
     # plotting actual data
     for event in data:
