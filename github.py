@@ -8,14 +8,6 @@ from warnings import warn
 
 from json_batch import save_batch
 
-class UnknownServiceException(Exception):
-
-    def __init__(self, service):
-        self.service = service
-
-    def __str__(self):
-        return self.service
-
 class ServiceFailedException(Exception):
 
     def __init__(self, msg):
