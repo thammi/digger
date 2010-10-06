@@ -11,12 +11,16 @@ mpl.use('Agg')
 import pylab
 
 
-def aggre_count(commits, key):
+def aggre_count(items, key=None):
     """Counting the occurences of aspects defined by a key"""
     counter = {}
     
-    for commit in commits:
-        value = key(commit)
+    for item in items:
+        if key:
+            value = key(item)
+        else:
+            value = item
+
         if value in counter:
             counter[value] += 1
         else:

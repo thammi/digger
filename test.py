@@ -77,7 +77,7 @@ def stats_file(dates, file_name):
     write("Amount", len(dates))
     write("Average", len(dates) / (max(dates) - min(dates)).days)
 
-    f.close()
+    out.close()
 
 def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
     if len(data) == 0:
@@ -93,50 +93,45 @@ def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
         os.makedirs(target_dir)
 
     # statistics
-    stats_file()
+    stats_file(dates, "stats.txt")
 
     # punchcard
     def punch_date(dt):
-        dt = blob_to_date(item)
         return (dt.hour, dt.weekday())
 
-    agg = aggre_count(data, punch_date)
+    agg = aggre_count(dates, punch_date)
 
     agg_punch_file(agg, os.path.join(target_dir, "punch_week.svg"))
 
     # week curve
-    def week_date(item):
-        dt = blob_to_date(item)
+    def week_date(dt):
         week = dt.isocalendar()[:2]
         return date2num(iso_to_gregorian(*week))
 
-    agg = aggre_count(data, week_date)
+    agg = aggre_count(dates, week_date)
 
     agg_curve_file(agg, os.path.join(target_dir, "curve_week.png"))
 
     # daily curve
-    def day_date(item):
-        dt = blob_to_date(item)
+    def day_date(dt):
         return date2num(datetime(*dt.timetuple()[:3]))
 
-    agg = aggre_count(data, day_date)
+    agg = aggre_count(dates, day_date)
 
     agg_curve_file(agg, os.path.join(target_dir, "curve_day.png"))
 
     # monthly curve
-    def month_date(item):
-        dt = blob_to_date(item)
+    def month_date(dt):
         year, month = dt.timetuple()[:2]
         return date2num(datetime(year, month, 1))
 
-    agg = aggre_count(data, month_date)
+    agg = aggre_count(dates, month_date)
 
     agg_curve_file(agg, os.path.join(target_dir, "curve_month.png"))
 
     # punchcard over single hour/day pairs
     # aka hour/day pairs with activity (no matter how much)
-    def hour_day_date(item):
-        dt = blob_to_date(item)
+    def hour_day_date(dt):
         return (dt.hour, dt.timetuple()[:3])
 
     def hour_day_to_week(hd):
@@ -144,16 +139,16 @@ def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
         return (hour, datetime(*date).weekday())
 
     # find hour/day tuples
-    day_agg = aggre_count(data, hour_day_date)
+    day_agg = aggre_count(dates, hour_day_date)
     # transform to hour/weekday tuples
     week_agg = aggre_count(day_agg.keys(), hour_day_to_week)
 
     agg_punch_file(week_agg, os.path.join(target_dir, "punch_week_single.svg"))
 
-    data = aggre_count(data, blob_to_date).keys()
+    agg = aggre_count(dates).keys()
 
     f = file(os.path.join(target_dir, "roll.png"), 'w')
-    roll_date_time(data, f)
+    roll_date_time(agg, f)
     f.close()
 
 def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
