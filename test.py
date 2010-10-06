@@ -72,7 +72,7 @@ def stats_file(dates, file_name):
     out = file(file_name, 'w')
 
     def write(key, value):
-        out.write('%10s - %s\n' % (key, str(value)))
+        out.write('{0:15} {1}\n'.format(key + ":", str(value)))
 
     write("Amount", len(dates))
     write("Average", len(dates) / (max(dates) - min(dates)).days)
