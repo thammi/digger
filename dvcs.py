@@ -6,6 +6,7 @@ from dulwich.repo import Repo
 
 from os.path import join, split, exists, isdir, islink, abspath
 from os import listdir
+from re import compile
 
 def import_dir(path):
     if exists(join(path, '.git')):
@@ -57,13 +58,18 @@ def commit_iterator(repo):
             # we are done here
             break
 
+user_re = compile('(.*)\s<(.*)>$')
+
 def import_git(path):
     repo = Repo(path)
     commits = []
 
     for commit in commit_iterator(repo):
+        match = user_re.match(commit.committer)
+
         commits.append({
-            'committer': commit.committer,
+            'committer': match.group(1),
+            'mail': match.group(2),
             'time': commit.commit_time,
             'message': commit.message,
             })
