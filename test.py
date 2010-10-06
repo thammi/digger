@@ -68,15 +68,35 @@ def agg_punch_file(agg, file_name):
     punch_svg(data, out)
     out.close()
 
+def stats_file(dates, file_name):
+    out = file(file_name, 'w')
+
+    def write(key, value):
+        out.write('%10s - %s' % (key, str(value)))
+
+    write("Amount", len(dates))
+    write("Average", len(dates) / (max(dates) - min(dates)).days)
+
+    f.close()
+
 def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
+    if len(data) == 0:
+        return
+
     if blob_filter:
         data = filter(blob_filter, data)
+        dates = [blob_to_date(blob) for blob in data if blob_filter(blob)]
+    else:
+        dates = map(blob_to_date, data)
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
+    # statistics
+    stats_file()
+
     # punchcard
-    def punch_date(item):
+    def punch_date(dt):
         dt = blob_to_date(item)
         return (dt.hour, dt.weekday())
 
@@ -197,11 +217,34 @@ def twitter(argv):
     batch_graphs(batch, "twitgraph", microblogging_date)
 
 def dvcs(argv):
+    print "Loading JSON ..."
+
     inp = file("raw_dvcs.json")
     batch = json.load(inp)
     inp.close()
 
-    batch_graphs(batch, "gitgraph", lambda c: datetime.fromtimestamp(c['time']))
+    print "Building project graphs ..."
+
+    batch_graphs(batch, "gitgraph/projects", lambda c: datetime.fromtimestamp(c['time']))
+
+    print "Calculating user structure ..."
+
+    users = set()
+    for project in batch.itervalues():
+        for commit in project:
+            users.add(commit['committer'].lower())
+
+    user_batch = {}
+    for user in users:
+        commits = []
+        for project in batch.itervalues():
+            commits.extend(commit for commit in project
+                    if commit['committer'].lower() == user)
+        user_batch[user] = commits
+
+    print "Building user graphs ..."
+
+    batch_graphs(user_batch, "gitgraph/users", lambda c: datetime.fromtimestamp(c['time']))
 
 def lastfm(argv):
     inp = file("raw_scrobbles.json")
