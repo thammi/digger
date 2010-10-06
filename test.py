@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import time
 import calendar
 import json
@@ -10,6 +10,22 @@ import os
 from graphs import *
 from git_stats import Base, date_to_weekday
 from datehelper import iso_to_gregorian
+
+def transform_batch(batch, key):
+    keys = set()
+    for data in batch.itervalues():
+        for item in data:
+            keys.add(key(item))
+
+    new_batch = {}
+    for cur in keys:
+        items = []
+        for data in batch.itervalues():
+            items.extend(item for item in data
+                    if key(item) == cur)
+        new_batch[cur] = items
+
+    return new_batch
 
 def paint_curve(agg):
     keys = agg.keys()
@@ -74,8 +90,11 @@ def stats_file(dates, file_name):
     def write(key, value):
         out.write('{0:15} {1}\n'.format(key + ":", str(value)))
 
+    exists = (max(dates) - min(dates)).days + 1
+
     write("Amount", len(dates))
-    write("Average", len(dates) / (max(dates) - min(dates)).days)
+    write("Exists (days)", exists)
+    write("Average", len(dates) / exists)
 
     out.close()
 
@@ -172,17 +191,41 @@ def log_date(entry):
     return datetime.fromtimestamp(stamp)
 
 def github_date(commit):
-    strf = "%Y-%m-%dT%H:%M:%S-07:00"
-    stime = time.strptime(commit['committed_date'], strf)
-    stamp = calendar.timegm(stime) + 7*60*60 # fixing github timezone
-    return datetime.fromtimestamp(stamp)
+    # splitting into time and timezone
+    time_str = commit['committed_date'][:-6]
+    tz_str = commit['committed_date'][-6:]
+
+    # calculating raw time
+    strf = "%Y-%m-%dT%H:%M:%S"
+    stime = time.strptime(time_str, strf)
+    stamp = calendar.timegm(stime)
+
+    # determine timezone delta
+    hours, minutes = (int(value) for value in tz_str[1:].split(':'))
+    tz_delta = timedelta(hours=hours, minutes=minutes)
+    if tz_str[0] == '+':
+        tz_delta *= -1
+
+    return datetime.fromtimestamp(stamp) + tz_delta
 
 def github(argv):
+    print "Loading JSON ..."
+
     inp = file("raw_github_commits.json")
     batch = json.load(inp)
     inp.close()
 
-    batch_graphs(batch, "githubgraph", github_date)
+    print "Building project graphs ..."
+
+    batch_graphs(batch, "githubgraph/projects", github_date)
+
+    print "Calculating user structure ..."
+
+    user_batch = transform_batch(batch, lambda commit: commit['committer']['name'].lower())
+
+    print "Building user graphs ..."
+
+    batch_graphs(user_batch, "githubgraph/user", github_date)
 
 
 def log(argv):
@@ -227,18 +270,7 @@ def dvcs(argv):
 
     print "Calculating user structure ..."
 
-    users = set()
-    for project in batch.itervalues():
-        for commit in project:
-            users.add(commit['committer'].lower())
-
-    user_batch = {}
-    for user in users:
-        commits = []
-        for project in batch.itervalues():
-            commits.extend(commit for commit in project
-                    if commit['committer'].lower() == user)
-        user_batch[user] = commits
+    user_batch = transform_batch(batch, lambda commit: commit['committer'].lower())
 
     print "Building user graphs ..."
 
