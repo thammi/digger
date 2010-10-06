@@ -6,6 +6,11 @@ import Image
 from ImageDraw import Draw
 from datetime import date, datetime
 
+import matplotlib as mpl
+mpl.use('Agg')
+import pylab
+
+
 def aggre_count(commits, key):
     """Counting the occurences of aspects defined by a key"""
     counter = {}
@@ -78,10 +83,6 @@ def roll_date_time(data, out, hour_parts=4, lines=4):
 
 def line_plot(data, out):
     """Turning ([key, ...], [value, ...]) into line graphs"""
-    import matplotlib as mpl
-    mpl.use('Agg')
-    import pylab
-
     pylab.clf()
 
     pylab.plot_date(data[0], data[1], '-')
