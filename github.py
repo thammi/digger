@@ -30,15 +30,17 @@ def api_call(method, repo, options={}):
 
     if res.getcode() < 300:
         return json.load(res)
-#TODO fix end of listing
+    # TODO fix end of listing
     else:
         msg = "Unable to fetch: %i" % res.getcode()
         raise ServiceFailedException(msg)
         
-def get_commits(repo):
+def fetch_repo(user, repo, branch='master'):
     #step = 200
     page = 1
     commits = []
+
+    repo_id = '/'.join((user, repo, branch))
 
     # how many dents are there?
     #count = api_call('users/show', {'id': user})['statuses_count']
@@ -47,7 +49,7 @@ def get_commits(repo):
         print "Fetching page %i" % page
 
         # fetch them
-        new_commits = api_call("commits/list", repo, {'page': page})
+        new_commits = api_call("commits/list", repo_id, {'page': page})
 
         # update the count
         count = len(new_commits['commits'])
@@ -63,23 +65,33 @@ def get_commits(repo):
 
     return commits
 
+def fetch_user():
+    raise NotImplementedError
+
 if __name__ == '__main__':
+    batch_fn = "raw_github_commits.json"
+
     if len(sys.argv) < 2:
         print "Please specify at least one repository (user/repository/branch)"
         sys.exit(1)
+    elif len(sys.argv) < 3:
+        user = sys.argv[1]
+
+        batch = fetch_user(user)
+
+        update_batch(batch, batch_fn)
     else:
-        repos = sys.argv[1:]
+        user = sys.argv[1]
+        repo = sys.argv[2]
+        branch = sys.argv[3] if len(sys.argv) >= 4 else 'master'
 
-        for repo in repos:
-            print "===> Fetching %s" % (repo)
+        commits = fetch_repo(user, repo, branch)
 
-            commits = get_commits(repo)
+        if not commits:
+            print "ERROR: No results!"
+        else:
+            save_batch(repo, commits, batch_fn)
 
-            if not commits:
-                print "ERROR: No results!"
-            else:
-                save_batch(repo, commits, "raw_github_commits.json")
-
-                print "Amount of commits:  %i" % len(commits)
-                print
+            print "Amount of commits:  %i" % len(commits)
+            print
 
