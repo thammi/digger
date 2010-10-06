@@ -16,17 +16,17 @@ class ServiceFailedException(Exception):
     def __str__(self):
         return self.msg
 
-def api_call(method, repo, page):
+def api_call(method, repo, options={}):
     base_url = "http://github.com/api/v2/json/"
          
     url_parts = {
-        'page' : page,
+        'query' : urllib.urlencode(options),
         'base_url': base_url,
         'method': method,
         'repo' : repo
         }
 
-    res = urllib.urlopen("{base_url}{method}/{repo}?page={page}".format(**url_parts))
+    res = urllib.urlopen("{base_url}{method}/{repo}?{query}".format(**url_parts))
 
     if res.getcode() < 300:
         return json.load(res)
@@ -47,7 +47,7 @@ def get_commits(repo):
         print "Fetching page %i" % page
 
         # fetch them
-        new_commits = api_call("commits/list", repo, page)
+        new_commits = api_call("commits/list", repo, {'page': page})
 
         # update the count
         count = len(new_commits['commits'])
