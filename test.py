@@ -6,9 +6,9 @@ import calendar
 import json
 import os.path
 import os
+import re
 
 from graphs import *
-from git_stats import Base, date_to_weekday
 from datehelper import iso_to_gregorian
 
 def transform_batch(batch, key):
@@ -178,6 +178,36 @@ def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
         item_dir = os.path.join(target_dir, name)
         blob_graph(data, item_dir, blob_to_date, blob_filter)
 
+def hashtag_transform(batch):
+    hash_batch = {}
+    count = 0
+
+    hash_ex = re.compile('\W#([\w_-]+)(?:\W|$)', re.LOCALE)
+    filter_ex = re.compile('-|-')
+
+    for user in batch.itervalues():
+        for message in user:
+            count += 1
+
+            tags = (filter_ex.sub('', tag.lower()) for tag
+                    in hash_ex.findall(message['text']))
+
+            for tag in tags:
+                if tag not in hash_batch:
+                    hash_batch[tag] = [message]
+                else:
+                    hash_batch[tag].append(message)
+
+    threshold = max(count / 500.0, 5)
+    for tag, messages in hash_batch.items():
+        if len(messages) < threshold:
+            del hash_batch[tag]
+
+    popular = sorted(hash_batch, key=lambda i: len(i))[:5]
+    print "Popular Hash-Tags: " + ', '.join(popular)
+
+    return hash_batch
+
 def microblogging_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
     stime = time.strptime(dent['created_at'], strf)
@@ -256,6 +286,7 @@ data_sources = {
                 'date': microblogging_date,
                 'aspects': {
                     'user': direct_aspect,
+                    'hashtag': hashtag_transform,
                     }
             },
         'twitter': {
@@ -263,6 +294,7 @@ data_sources = {
                 'date': microblogging_date,
                 'aspects': {
                     'user': direct_aspect,
+                    'hashtag': hashtag_transform,
                     }
             },
         'lastfm': {
@@ -312,7 +344,7 @@ def plot_source(argv):
             print "Generating aspect '%s' ..." % name
             aspect_batch = aspect(batch)
 
-            print "Building '%s' graphs ..." % name
+            print "Building '%s' graphs (%i items) ..." % (name, len(aspect_batch))
             batch_graphs(aspect_batch, aspect_path, date_fun, blob_filter)
 
 def aspect_plot(aspect_id, targets, sources=None):
