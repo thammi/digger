@@ -346,8 +346,11 @@ def aspect_plot(aspect_id, targets, sources=None):
 
             blob_filter = source['filter'] if 'filter' in source else lambda i: True
             date_fun = source['date']
+            # for each target
             for target_id, aliases in targets.iteritems():
+                # ... and each alias of it ...
                 for alias in aliases:
+                    # ... check for events
                     if alias in aspect_batch:
                         dates[target_id].extend(
                                 date_fun(item)
@@ -400,7 +403,7 @@ def aspect_file(argv):
             target_id = line[1:-1]
             targets[target_id] = []
         elif len(line) > 0:
-            # all lines are considered aliases for the last target id
+            # all other lines are considered aliases for the last target id
             if target_id:
                 targets[target_id].append(line)
             else:
