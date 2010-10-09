@@ -12,13 +12,36 @@ from graphs import *
 from datehelper import iso_to_gregorian
 
 def transform_batch(batch, key):
-    keys = set()
+    new_batch = {}
+
     for data in batch.itervalues():
         for item in data:
-            keys.add(key(item))
+            cur = key(item)
 
+            if cur in new_batch:
+                new_batch[cur].append(item)
+            else:
+                new_batch[cur] = [item]
+
+    return new_batch
+
+def limit_transform(batch, key, max_amount):
+    # first find out which keys are used how much
+    keys = {}
+    for data in batch.itervalues():
+        for item in data:
+            cur = key(item)
+            if cur in keys:
+                keys[cur] += 1
+            else:
+                keys[cur] = 1
+
+    # sort them and only keep $max_amoun keys
+    top = sorted(keys.iteritems(), key=lambda (k, v): v, reverse=True)[:max_amount]
+
+    # actually move data around
     new_batch = {}
-    for cur in keys:
+    for cur in (key for key, value in top):
         items = []
         for data in batch.itervalues():
             items.extend(item for item in data
@@ -203,8 +226,8 @@ def hashtag_transform(batch):
         if len(messages) < threshold:
             del hash_batch[tag]
 
-    popular = sorted(hash_batch, key=lambda i: len(i))[:5]
-    print "Popular Hash-Tags: " + ', '.join(popular)
+    popular = sorted(hash_batch.iteritems(), key=lambda (tag, msgs): len(msgs), reverse=True)[:10]
+    print "Popular Hash-Tags: " + ', '.join(tag for tag, msgs in popular)
 
     return hash_batch
 
@@ -222,6 +245,7 @@ def log_date(entry):
 
 def github_date(commit):
     # splitting into time and timezone
+    #print "[[[%s]]]" % commit
     time_str = commit['committed_date'][:-6]
     tz_str = commit['committed_date'][-6:]
 
@@ -252,6 +276,10 @@ def json_loader(file_name):
 
 def item_aspect(aspect_fun):
     return lambda batch: transform_batch(batch, aspect_fun)
+
+def limited_item_aspect(aspect_fun, limit):
+    return lambda batch: limit_transform(batch, aspect_fun, limit)
+
 
 def direct_aspect(batch):
     return batch
@@ -303,6 +331,7 @@ data_sources = {
                 'filter': lambda s: 'date' in s,
                 'aspects': {
                     'user': direct_aspect,
+                    'artist': limited_item_aspect(lambda s: s['artist']['#text'], 50),
                     }
             },
     }
