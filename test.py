@@ -208,97 +208,111 @@ def github_date(commit):
 
     return datetime.fromtimestamp(stamp) + tz_delta
 
-def github(argv):
-    print "Loading JSON ..."
+def json_loader(file_name):
+    def loader():
+        inp = file(file_name)
+        batch = json.load(inp)
+        inp.close()
+        return batch
 
-    inp = file("raw_github_commits.json")
-    batch = json.load(inp)
-    inp.close()
+    return loader
 
-    print "Building project graphs ..."
+def item_aspect(aspect_fun):
+    return lambda batch: transform_batch(batch, aspect_fun)
 
-    batch_graphs(batch, "githubgraph/projects", github_date)
+def direct_aspect(batch):
+    return batch
 
-    print "Calculating user structure ..."
+data_sources = {
+        'github': {
+                'load': json_loader("raw_github_commits.json"),
+                'date': github_date,
+                'aspects': {
+                    'project': direct_aspect,
+                    'user': item_aspect(lambda commit: commit['committer']['name'].lower()),
+                    }
+            },
+        'dvcs': {
+                'load': json_loader("raw_dvcs.json"),
+                'date': lambda c: datetime.fromtimestamp(c['time']),
+                'aspects': {
+                    'project': direct_aspect,
+                    'user': item_aspect(lambda commit: commit['committer'].lower()),
+                    }
+            },
+        'log': {
+                'load': lambda: {'core': json_loader('raw_log.json')},
+                'filter': lambda entry: entry['action'] == 'online',
+                'date': log_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    }
+            },
+        'identica': {
+                'load': json_loader("raw_updates_identica.json"),
+                'date': microblogging_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    }
+            },
+        'twitter': {
+                'load': json_loader("raw_updates_twitter.json"),
+                'date': microblogging_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    }
+            },
+        'lastfm': {
+                'load': json_loader("raw_scrobbles.json"),
+                'date': lambda s: datetime.fromtimestamp(int(s['date']['uts'])),
+                'filter': lambda s: 'date' in s,
+                'aspects': {
+                    'user': direct_aspect,
+                    }
+            },
+    }
 
-    user_batch = transform_batch(batch, lambda commit: commit['committer']['name'].lower())
+def plot_source(argv):
+    if len(argv) < 1:
+        print "Add at least one source to plot"
+        return
 
-    print "Building user graphs ..."
+    for source_id in argv:
+        print "==> Plotting '%s'" % source_id
+        source = data_sources[source_id]
 
-    batch_graphs(user_batch, "githubgraph/user", github_date)
+        source_path = os.path.join("out", source_id)
+        date_fun = source['date']
+        aspects = source['aspects']
 
 
-def log(argv):
-    inp = file("raw_log.json")
+        print "Loading source ..."
 
-    def online_filter(entry):
-        if entry['action'] == "online":
-            return True
-        else:
-            return False
+        batch = source['load']()
 
-    batch = {}
-    batch['core'] = json.load(inp)
-    inp.close()
+        for name, aspect in aspects.iteritems():
+            # where to write to?
+            if len(aspects) <= 1:
+                # let's stay flat
+                aspect_path = source_path
+            else:
+                # build structure
+                aspect_path = os.path.join(source_path, name)
 
-    batch_graphs(batch, "loggraph", log_date, online_filter)
+            # is there a filter defined?
+            blob_filter = source['filter'] if 'filter' in source else None
 
-def identica(argv):
-    inp = file("raw_updates_identica.json")
-    batch = json.load(inp)
-    inp.close()
+            print "Generating aspect '%s' ..." % name
+            aspect_batch = aspect(batch)
 
-    batch_graphs(batch, "dentgraph", microblogging_date)
-
-def twitter(argv):
-    inp = file("raw_updates_twitter.json")
-    batch = json.load(inp)
-    inp.close()
-
-    batch_graphs(batch, "twitgraph", microblogging_date)
-
-def dvcs(argv):
-    print "Loading JSON ..."
-
-    inp = file("raw_dvcs.json")
-    batch = json.load(inp)
-    inp.close()
-
-    print "Building project graphs ..."
-
-    batch_graphs(batch, "gitgraph/projects", lambda c: datetime.fromtimestamp(c['time']))
-
-    print "Calculating user structure ..."
-
-    user_batch = transform_batch(batch, lambda commit: commit['committer'].lower())
-
-    print "Building user graphs ..."
-
-    batch_graphs(user_batch, "gitgraph/users", lambda c: datetime.fromtimestamp(c['time']))
-
-def lastfm(argv):
-    inp = file("raw_scrobbles.json")
-    batch = json.load(inp)
-    inp.close()
-
-    def scrobble_date(scrobble):
-        return datetime.fromtimestamp(int(scrobble['date']['uts']))
-
-    def date_filter(scrobble):
-        return 'date' in scrobble
-
-    batch_graphs(batch, "lastgraph", scrobble_date, date_filter)
+            print "Building '%s' graphs ..." % name
+            batch_graphs(aspect_batch, aspect_path, date_fun, blob_filter)
 
 def main(argv):
     actions = {
+            'plot': plot_source,
             'curve': curve,
             'punchcard': punchcard,
-            'identica': identica,
-            'twitter' : twitter,
-            'lastfm': lastfm,
-            'dvcs': dvcs,
-            'log' : log,
-            'github' : github,
             }
 
     if len(argv):
