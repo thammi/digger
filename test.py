@@ -210,10 +210,13 @@ def github_date(commit):
 
 def json_loader(file_name):
     def loader():
-        inp = file(file_name)
-        batch = json.load(inp)
-        inp.close()
-        return batch
+        if os.path.exists(file_name):
+            inp = file(file_name)
+            batch = json.load(inp)
+            inp.close()
+            return batch
+        else:
+            return {}
 
     return loader
 
@@ -241,7 +244,7 @@ data_sources = {
                     }
             },
         'log': {
-                'load': lambda: {'core': json_loader('raw_log.json')},
+                'load': json_loader("raw_log.json"),
                 'filter': lambda entry: entry['action'] == 'online',
                 'date': log_date,
                 'aspects': {
@@ -279,12 +282,16 @@ def plot_source(argv):
 
     for source_id in argv:
         print "==> Plotting '%s'" % source_id
+
+        if source_id not in data_sources:
+            print "ERROR: Source '%s' not found!" % source_id
+            break
+
         source = data_sources[source_id]
 
         source_path = os.path.join("out", source_id)
         date_fun = source['date']
         aspects = source['aspects']
-
 
         print "Loading source ..."
 
@@ -308,9 +315,94 @@ def plot_source(argv):
             print "Building '%s' graphs ..." % name
             batch_graphs(aspect_batch, aspect_path, date_fun, blob_filter)
 
+def aspect_plot(aspect_id, targets):
+    dates = {}
+
+    for target_id in targets:
+        dates[target_id] = []
+
+    for name, source in data_sources.items():
+        print "==> Processing aspect '%s'" % name
+
+        if aspect_id in source['aspects']:
+            print "Loading source ..."
+
+            batch = source['load']()
+
+            print "Calculating the aspect ..."
+
+            aspect_batch = source['aspects'][aspect_id](batch)
+
+            print "Searching the targets in the aspect ..."
+
+            blob_filter = source['filter'] if 'filter' in source else lambda i: True
+            date_fun = source['date']
+            for target_id, aliases in targets.iteritems():
+                for alias in aliases:
+                    if alias in aspect_batch:
+                        dates[target_id].extend(
+                                date_fun(item)
+                                for item
+                                in aspect_batch[alias]
+                                if blob_filter(item))
+        else:
+            print "Source doesn't have the searched aspect"
+
+    print "==> Calculating the graph"
+
+    for target_id, data in dates.iteritems():
+        path = os.path.join('out', 'aspect', aspect_id, target_id)
+        blob_graph(data, path, lambda date: date)
+
+def one_aspect(argv):
+    if len(argv) < 2:
+        print "Please use the following parameters: aspect_id target [alias ...]"
+        return
+
+    aspect_id = argv[0]
+    targets = {
+            # one target with given aliases
+            argv[1]: argv[1:],
+            }
+
+    aspect_plot(aspect_id, targets)
+
+def aspect_file(argv):
+    if len(argv) < 2:
+        print "Please use the following parameters: aspect_id alias_file"
+        return
+
+    aspect_id = argv[0]
+    afile = argv[1]
+
+    if not os.path.exists(afile):
+        print "The specified file doesn't exist"
+        return
+
+    targets = {}
+
+    target_id = None
+    for line in file(afile):
+        line = line.strip()
+
+        if line.startswith('[') and line.endswith(']'):
+            # target ids are defined as '[$target_id]'
+            target_id = line[1:-1]
+            targets[target_id] = []
+        elif len(line) > 0:
+            # all lines are considered aliases for the last target id
+            if target_id:
+                targets[target_id].append(line)
+            else:
+                print "Malformed alias file, no target id for entry '%s'" % line
+
+    aspect_plot(aspect_id, targets)
+
 def main(argv):
     actions = {
             'plot': plot_source,
+            'aspect': one_aspect,
+            'afile': aspect_file,
             'curve': curve,
             'punchcard': punchcard,
             }
