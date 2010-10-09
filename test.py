@@ -315,14 +315,23 @@ def plot_source(argv):
             print "Building '%s' graphs ..." % name
             batch_graphs(aspect_batch, aspect_path, date_fun, blob_filter)
 
-def aspect_plot(aspect_id, targets):
+def aspect_plot(aspect_id, targets, sources=None):
+    if sources == None:
+        sources = data_sources.keys()
+
     dates = {}
 
     for target_id in targets:
         dates[target_id] = []
 
-    for name, source in data_sources.items():
-        print "==> Processing aspect '%s'" % name
+    for source_id in sources:
+        print "==> Processing aspect '%s'" % source_id
+
+        if source_id not in data_sources:
+            print "ERROR: Unknown source!"
+            break
+
+        source = data_sources[source_id]
 
         if aspect_id in source['aspects']:
             print "Loading source ..."
@@ -354,7 +363,7 @@ def aspect_plot(aspect_id, targets):
         path = os.path.join('out', 'aspect', aspect_id, target_id)
         blob_graph(data, path, lambda date: date)
 
-def one_aspect(argv):
+def filter_aspect(argv):
     if len(argv) < 2:
         print "Please use the following parameters: aspect_id target [alias ...]"
         return
@@ -369,11 +378,12 @@ def one_aspect(argv):
 
 def aspect_file(argv):
     if len(argv) < 2:
-        print "Please use the following parameters: aspect_id alias_file"
+        print "Please use the following parameters: aspect_id alias_file [sources ...]"
         return
 
     aspect_id = argv[0]
     afile = argv[1]
+    sources = argv[2:] if len(argv) > 2 else None
 
     if not os.path.exists(afile):
         print "The specified file doesn't exist"
@@ -396,12 +406,12 @@ def aspect_file(argv):
             else:
                 print "Malformed alias file, no target id for entry '%s'" % line
 
-    aspect_plot(aspect_id, targets)
+    aspect_plot(aspect_id, targets, sources)
 
 def main(argv):
     actions = {
             'plot': plot_source,
-            'aspect': one_aspect,
+            'afilter': filter_aspect,
             'afile': aspect_file,
             'curve': curve,
             'punchcard': punchcard,
