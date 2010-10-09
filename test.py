@@ -126,7 +126,6 @@ def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
         return
 
     if blob_filter:
-        data = filter(blob_filter, data)
         dates = [blob_to_date(blob) for blob in data if blob_filter(blob)]
     else:
         dates = map(blob_to_date, data)
