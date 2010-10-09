@@ -206,7 +206,7 @@ def hashtag_transform(batch):
     count = 0
 
     hash_ex = re.compile('\W#([\w_-]+)(?:\W|$)', re.LOCALE)
-    filter_ex = re.compile('-|-')
+    filter_ex = re.compile('_|-')
 
     for user in batch.itervalues():
         for message in user:
@@ -221,11 +221,13 @@ def hashtag_transform(batch):
                 else:
                     hash_batch[tag].append(message)
 
+    # throw away less used tags
     threshold = max(count / 500.0, 5)
     for tag, messages in hash_batch.items():
         if len(messages) < threshold:
             del hash_batch[tag]
 
+    # a small popularity contest ;)
     popular = sorted(hash_batch.iteritems(), key=lambda (tag, msgs): len(msgs), reverse=True)[:10]
     print "Popular Hash-Tags: " + ', '.join(tag for tag, msgs in popular)
 
