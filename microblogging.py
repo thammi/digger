@@ -63,7 +63,7 @@ def get_page(service, user, count, page):
 
     return api_call('statuses/user_timeline', options)
 
-def get_statuses(service, user):
+def get_statuses(service, user, limit=None):
     step = 200
     page = 1
     statuses = []
@@ -71,7 +71,10 @@ def get_statuses(service, user):
     # how many dents are there?
     count = api_call('users/show', {'id': user})['statuses_count']
 
-    while count:
+    if limit:
+        count = min(count, limit)
+
+    while count > 0:
         print "Fetching page %i, %i updates remaining" % (page, count)
 
         # how many statuses to fetch?
