@@ -6,19 +6,42 @@ import calendar
 import json
 import os.path
 import os
+import re
 
 from graphs import *
-from git_stats import Base, date_to_weekday
 from datehelper import iso_to_gregorian
 
 def transform_batch(batch, key):
-    keys = set()
+    new_batch = {}
+
     for data in batch.itervalues():
         for item in data:
-            keys.add(key(item))
+            cur = key(item)
 
+            if cur in new_batch:
+                new_batch[cur].append(item)
+            else:
+                new_batch[cur] = [item]
+
+    return new_batch
+
+def limit_transform(batch, key, max_amount):
+    # first find out which keys are used how much
+    keys = {}
+    for data in batch.itervalues():
+        for item in data:
+            cur = key(item)
+            if cur in keys:
+                keys[cur] += 1
+            else:
+                keys[cur] = 1
+
+    # sort them and only keep $max_amoun keys
+    top = sorted(keys.iteritems(), key=lambda (k, v): v, reverse=True)[:max_amount]
+
+    # actually move data around
     new_batch = {}
-    for cur in keys:
+    for cur in (key for key, value in top):
         items = []
         for data in batch.itervalues():
             items.extend(item for item in data
@@ -185,6 +208,38 @@ def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
         item_dir = os.path.join(target_dir, name)
         blob_graph(data, item_dir, blob_to_date, blob_filter)
 
+def hashtag_transform(batch):
+    hash_batch = {}
+    count = 0
+
+    hash_ex = re.compile('\W#([\w_-]+)(?:\W|$)', re.LOCALE)
+    filter_ex = re.compile('_|-')
+
+    for user in batch.itervalues():
+        for message in user:
+            count += 1
+
+            tags = (filter_ex.sub('', tag.lower()) for tag
+                    in hash_ex.findall(message['text']))
+
+            for tag in tags:
+                if tag not in hash_batch:
+                    hash_batch[tag] = [message]
+                else:
+                    hash_batch[tag].append(message)
+
+    # throw away less used tags
+    threshold = max(count / 500.0, 5)
+    for tag, messages in hash_batch.items():
+        if len(messages) < threshold:
+            del hash_batch[tag]
+
+    # a small popularity contest ;)
+    popular = sorted(hash_batch.iteritems(), key=lambda (tag, msgs): len(msgs), reverse=True)[:10]
+    print "Popular Hash-Tags: " + ', '.join(tag for tag, msgs in popular)
+
+    return hash_batch
+
 def microblogging_date(dent):
     strf = "%a %b %d %H:%M:%S +0000 %Y"
     stime = time.strptime(dent['created_at'], strf)
@@ -199,6 +254,7 @@ def log_date(entry):
 
 def github_date(commit):
     # splitting into time and timezone
+    #print "[[[%s]]]" % commit
     time_str = commit['committed_date'][:-6]
     tz_str = commit['committed_date'][-6:]
 
@@ -215,97 +271,223 @@ def github_date(commit):
 
     return datetime.fromtimestamp(stamp) + tz_delta
 
-def github(argv):
-    print "Loading JSON ..."
-
-    inp = file("raw_github_commits.json")
-    batch = json.load(inp)
-    inp.close()
-
-    print "Building project graphs ..."
-
-    batch_graphs(batch, "githubgraph/projects", github_date)
-
-    print "Calculating user structure ..."
-
-    user_batch = transform_batch(batch, lambda commit: commit['committer']['name'].lower())
-
-    print "Building user graphs ..."
-
-    batch_graphs(user_batch, "githubgraph/user", github_date)
-
-
-def log(argv):
-    inp = file("raw_log.json")
-
-    def online_filter(entry):
-        if entry['action'] == "online":
-            return True
+def json_loader(file_name):
+    def loader():
+        if os.path.exists(file_name):
+            inp = file(file_name)
+            batch = json.load(inp)
+            inp.close()
+            return batch
         else:
-            return False
+            return {}
 
-    batch = {}
-    batch['core'] = json.load(inp)
-    inp.close()
+    return loader
 
-    batch_graphs(batch, "loggraph", log_date, online_filter)
+def item_aspect(aspect_fun):
+    return lambda batch: transform_batch(batch, aspect_fun)
 
-def identica(argv):
-    inp = file("raw_updates_identica.json")
-    batch = json.load(inp)
-    inp.close()
+def limited_item_aspect(aspect_fun, limit):
+    return lambda batch: limit_transform(batch, aspect_fun, limit)
 
-    batch_graphs(batch, "dentgraph", microblogging_date)
 
-def twitter(argv):
-    inp = file("raw_updates_twitter.json")
-    batch = json.load(inp)
-    inp.close()
+def direct_aspect(batch):
+    return batch
 
-    batch_graphs(batch, "twitgraph", microblogging_date)
+data_sources = {
+        'github': {
+                'load': json_loader("raw_github_commits.json"),
+                'date': github_date,
+                'aspects': {
+                    'project': direct_aspect,
+                    'user': item_aspect(lambda commit: commit['committer']['name'].lower()),
+                    }
+            },
+        'dvcs': {
+                'load': json_loader("raw_dvcs.json"),
+                'date': lambda c: datetime.fromtimestamp(c['time']),
+                'aspects': {
+                    'project': direct_aspect,
+                    'user': item_aspect(lambda commit: commit['committer'].lower()),
+                    }
+            },
+        'log': {
+                'load': json_loader("raw_log.json"),
+                'filter': lambda entry: entry['action'] == 'online',
+                'date': log_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    }
+            },
+        'identica': {
+                'load': json_loader("raw_updates_identica.json"),
+                'date': microblogging_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    'hashtag': hashtag_transform,
+                    }
+            },
+        'twitter': {
+                'load': json_loader("raw_updates_twitter.json"),
+                'date': microblogging_date,
+                'aspects': {
+                    'user': direct_aspect,
+                    'hashtag': hashtag_transform,
+                    }
+            },
+        'lastfm': {
+                'load': json_loader("raw_scrobbles.json"),
+                'date': lambda s: datetime.fromtimestamp(int(s['date']['uts'])),
+                'filter': lambda s: 'date' in s,
+                'aspects': {
+                    'user': direct_aspect,
+                    'artist': limited_item_aspect(lambda s: s['artist']['#text'], 50),
+                    }
+            },
+    }
 
-def dvcs(argv):
-    print "Loading JSON ..."
+def plot_source(argv):
+    if len(argv) < 1:
+        print "Add at least one source to plot"
+        return
 
-    inp = file("raw_dvcs.json")
-    batch = json.load(inp)
-    inp.close()
+    for source_id in argv:
+        print "==> Plotting '%s'" % source_id
 
-    print "Building project graphs ..."
+        if source_id not in data_sources:
+            print "ERROR: Source '%s' not found!" % source_id
+            break
 
-    batch_graphs(batch, "gitgraph/projects", lambda c: datetime.fromtimestamp(c['time']))
+        source = data_sources[source_id]
 
-    print "Calculating user structure ..."
+        source_path = os.path.join("out", source_id)
+        date_fun = source['date']
+        aspects = source['aspects']
 
-    user_batch = transform_batch(batch, lambda commit: commit['committer'].lower())
+        print "Loading source ..."
 
-    print "Building user graphs ..."
+        batch = source['load']()
 
-    batch_graphs(user_batch, "gitgraph/users", lambda c: datetime.fromtimestamp(c['time']))
+        for name, aspect in aspects.iteritems():
+            # where to write to?
+            if len(aspects) <= 1:
+                # let's stay flat
+                aspect_path = source_path
+            else:
+                # build structure
+                aspect_path = os.path.join(source_path, name)
 
-def lastfm(argv):
-    inp = file("raw_scrobbles.json")
-    batch = json.load(inp)
-    inp.close()
+            # is there a filter defined?
+            blob_filter = source['filter'] if 'filter' in source else None
 
-    def scrobble_date(scrobble):
-        return datetime.fromtimestamp(int(scrobble['date']['uts']))
+            print "Generating aspect '%s' ..." % name
+            aspect_batch = aspect(batch)
 
-    def date_filter(scrobble):
-        return 'date' in scrobble
+            print "Building '%s' graphs (%i items) ..." % (name, len(aspect_batch))
+            batch_graphs(aspect_batch, aspect_path, date_fun, blob_filter)
 
-    batch_graphs(batch, "lastgraph", scrobble_date, date_filter)
+def aspect_plot(aspect_id, targets, sources=None):
+    if sources == None:
+        sources = data_sources.keys()
+
+    dates = {}
+
+    for target_id in targets:
+        dates[target_id] = []
+
+    for source_id in sources:
+        print "==> Processing aspect '%s'" % source_id
+
+        if source_id not in data_sources:
+            print "ERROR: Unknown source!"
+            break
+
+        source = data_sources[source_id]
+
+        if aspect_id in source['aspects']:
+            print "Loading source ..."
+
+            batch = source['load']()
+
+            print "Calculating the aspect ..."
+
+            aspect_batch = source['aspects'][aspect_id](batch)
+
+            print "Searching the targets in the aspect ..."
+
+            blob_filter = source['filter'] if 'filter' in source else lambda i: True
+            date_fun = source['date']
+            # for each target
+            for target_id, aliases in targets.iteritems():
+                # ... and each alias of it ...
+                for alias in aliases:
+                    # ... check for events
+                    if alias in aspect_batch:
+                        dates[target_id].extend(
+                                date_fun(item)
+                                for item
+                                in aspect_batch[alias]
+                                if blob_filter(item))
+        else:
+            print "Source doesn't have the searched aspect"
+
+    print "==> Calculating the graph"
+
+    for target_id, data in dates.iteritems():
+        path = os.path.join('out', 'aspect', aspect_id, target_id)
+        blob_graph(data, path, lambda date: date)
+
+def filter_aspect(argv):
+    if len(argv) < 2:
+        print "Please use the following parameters: aspect_id target [alias ...]"
+        return
+
+    aspect_id = argv[0]
+    targets = {
+            # one target with given aliases
+            argv[1]: argv[1:],
+            }
+
+    aspect_plot(aspect_id, targets)
+
+def aspect_file(argv):
+    if len(argv) < 2:
+        print "Please use the following parameters: aspect_id alias_file [sources ...]"
+        return
+
+    aspect_id = argv[0]
+    afile = argv[1]
+    sources = argv[2:] if len(argv) > 2 else None
+
+    if not os.path.exists(afile):
+        print "The specified file doesn't exist"
+        return
+
+    targets = {}
+
+    target_id = None
+    for line in file(afile):
+        line = line.strip()
+
+        if line.startswith('[') and line.endswith(']'):
+            # target ids are defined as '[$target_id]'
+            target_id = line[1:-1]
+            targets[target_id] = []
+        elif len(line) > 0:
+            # all other lines are considered aliases for the last target id
+            if target_id:
+                targets[target_id].append(line)
+            else:
+                print "Malformed alias file, no target id for entry '%s'" % line
+
+    aspect_plot(aspect_id, targets, sources)
 
 def main(argv):
     actions = {
+            'plot': plot_source,
+            'afilter': filter_aspect,
+            'afile': aspect_file,
             'curve': curve,
             'punchcard': punchcard,
-            'identica': identica,
-            'twitter' : twitter,
-            'lastfm': lastfm,
-            'dvcs': dvcs,
-            'log' : log,
-            'github' : github,
             }
 
     if len(argv):
