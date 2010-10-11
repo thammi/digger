@@ -1,6 +1,7 @@
-import json
 from warnings import warn
 import os.path
+
+from json_hack import json
 
 def change_batch(change, file_name):
     if os.path.exists(file_name):
@@ -31,4 +32,10 @@ def save_batch(item, data, file_name):
         batch[item] = data
 
     change_batch(save, file_name)
+
+def load_batch(file_name):
+    inp = file(file_name)
+    data = json.load(inp)
+    inp.close()
+    return data
 
