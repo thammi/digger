@@ -3,13 +3,30 @@
 from datetime import datetime, date, timedelta
 import time
 import calendar
-import json
 import os.path
 import os
 import re
 
 from graphs import *
 from datehelper import iso_to_gregorian
+
+# ugly hack to get faster json
+try:
+    import cjson
+
+    # emulate built-in json/simplejson
+    class Json:
+        def load(self, inp):
+            return cjson.decode(inp.read())
+
+        def loads(self, data):
+            return cjson.decode(data)
+
+    json = Json()
+except:
+    from warnings import warn
+    warn("cjson not found, using slower json")
+    import json
 
 def transform_batch(batch, key):
     new_batch = {}
@@ -36,7 +53,7 @@ def limit_transform(batch, key, max_amount):
             else:
                 keys[cur] = 1
 
-    # sort them and only keep $max_amoun keys
+    # sort them and only keep $max_amount keys
     top = sorted(keys.iteritems(), key=lambda (k, v): v, reverse=True)[:max_amount]
 
     # actually move data around
