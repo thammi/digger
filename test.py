@@ -10,23 +10,7 @@ import re
 from graphs import *
 from datehelper import iso_to_gregorian
 
-# ugly hack to get faster json
-try:
-    import cjson
-
-    # emulate built-in json/simplejson
-    class Json:
-        def load(self, inp):
-            return cjson.decode(inp.read())
-
-        def loads(self, data):
-            return cjson.decode(data)
-
-    json = Json()
-except:
-    from warnings import warn
-    warn("cjson not found, using slower json")
-    import json
+from json_hack import json
 
 def transform_batch(batch, key):
     new_batch = {}
