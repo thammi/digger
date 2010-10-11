@@ -99,14 +99,14 @@ def stats_file(dates, file_name):
     out.close()
 
 def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
-    if len(data) == 0:
-        return
-
     if blob_filter:
         data = filter(blob_filter, data)
         dates = [blob_to_date(blob) for blob in data if blob_filter(blob)]
     else:
         dates = map(blob_to_date, data)
+
+    if len(dates) == 0:
+        return
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
@@ -173,7 +173,14 @@ def blob_graph(data, target_dir, blob_to_date, blob_filter=None):
     roll_date_time(agg, f)
     f.close()
 
+def flattener(batch):
+    for data in batch.itervalues():
+        for item in data:
+            yield item
+
 def batch_graphs(batch, target_dir, blob_to_date, blob_filter=None):
+    blob_graph(flattener(batch), target_dir, blob_to_date, blob_filter)
+
     for name, data in batch.iteritems():
         item_dir = os.path.join(target_dir, name)
         blob_graph(data, item_dir, blob_to_date, blob_filter)
