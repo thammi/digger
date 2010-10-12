@@ -105,7 +105,7 @@ if __name__ == '__main__':
         if not commits:
             print "ERROR: No results!"
         else:
-            repo_id = '/',join((user, repo, branch))
+            repo_id = '/'.join((user, repo, branch))
             save_batch(repo, commits, batch_fn)
 
             print "Amount of commits:  %i" % len(commits)
