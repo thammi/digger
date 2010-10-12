@@ -24,7 +24,7 @@ class ServiceFailedException(Exception):
     def __str__(self):
         return self.msg
 
-def api_call(method, options):
+def api_call(service, method, options):
     base_urls = {
             'identica' : "http://identi.ca/api/",
             'twitter' : "http://api.twitter.com/1/",
@@ -61,7 +61,10 @@ def get_page(service, user, count, page):
             'include_rts': 'true', #get all 200 tweets from twitter
             }
 
-    return api_call('statuses/user_timeline', options)
+    return api_call(service, 'statuses/user_timeline', options)
+
+def find_updates(service, query):
+    api_call(service, 'search', {})
 
 def get_statuses(service, user, limit=None):
     step = 200
@@ -69,7 +72,7 @@ def get_statuses(service, user, limit=None):
     statuses = []
 
     # how many dents are there?
-    count = api_call('users/show', {'id': user})['statuses_count']
+    count = api_call(service, 'users/show', {'id': user})['statuses_count']
 
     if limit:
         count = min(count, limit)
@@ -94,6 +97,20 @@ def get_statuses(service, user, limit=None):
 
     return statuses
 
+def save_users(service, users):
+    for user in users:
+        print "===> Fetching %s on %s" % (user, service)
+
+        updates = get_statuses(service, user)
+
+        if not updates:
+            print "ERROR: No results!"
+        else:
+            save_batch(user, updates, "raw_updates_%s.json" % service)
+
+            print "Amount of updates:  %i" % len(updates)
+            print
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         print "Please specify at least the service (identica or twitter) and one user id"
@@ -102,16 +119,5 @@ if __name__ == '__main__':
         service = sys.argv[1]
         users = sys.argv[2:]
 
-        for user in users:
-            print "===> Fetching %s on %s" % (user, service)
-
-            updates = get_statuses(service, user)
-
-            if not updates:
-                print "ERROR: No results!"
-            else:
-                save_batch(user, updates, "raw_updates_%s.json" % service)
-
-                print "Amount of updates:  %i" % len(updates)
-                print
+        save_users(service, users)
 
