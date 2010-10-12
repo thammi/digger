@@ -118,7 +118,7 @@ def stats_file(dates, file_name):
 
     write("Amount", len(dates))
     write("Exists (days)", exists)
-    write("Average", len(dates) / exists)
+    write("Average/day", len(dates) / float(exists))
 
     out.close()
 
