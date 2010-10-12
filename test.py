@@ -283,6 +283,18 @@ def json_loader(file_name):
 
     return loader
 
+def single_loader(name, file_name):
+    def loader():
+        if os.path.exists(file_name):
+            inp = file(file_name)
+            data = json.load(inp)
+            inp.close()
+            return {name: data}
+        else:
+            return {}
+
+    return loader
+
 def item_aspect(aspect_fun):
     return lambda batch: transform_batch(batch, aspect_fun)
 
@@ -311,7 +323,7 @@ data_sources = {
                     }
             },
         'log': {
-                'load': json_loader("raw_log.json"),
+                'load': single_loader("core", "raw_log.json"),
                 'filter': lambda entry: entry['action'] == 'online',
                 'date': log_date,
                 'aspects': {
