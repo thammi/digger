@@ -89,6 +89,13 @@ def single_week_punchcard(blob):
     week_agg = aggre_count(day_agg, lambda (h, d): (h, date_to_weekday(d)))
     return exec_svg(week_agg)
 
+def roll(blob):
+    dates = [datetime(*c['date'][:6]) for c in blob.commits()]
+
+    buf = StringIO()
+    roll_date_time(dates, buf)
+    return buf.getvalue()
+
 class Cache:
 
     def __init__(self):
@@ -118,6 +125,7 @@ class ProjectFS(Fuse):
             'punch_week_single.svg': single_week_punchcard,
             'curve_day.png': curve_day,
             'curve_week.png': curve_week,
+            'roll.png': roll,
             }
 
     def __init__(self, base, *args, **kw):
