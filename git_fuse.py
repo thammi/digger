@@ -1,10 +1,27 @@
 #!/usr/bin/env python
+###############################################################################
+##
+## digger - Digging into some data mines
+## Copyright (C) 2006  Andrew Straw  <strawman@astraw.com>
+## Copyright (C) 2010  Thammi
+## 
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU Affero General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+## 
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU Affero General Public License for more details.
+## 
+## You should have received a copy of the GNU Affero General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##
+###############################################################################
 
-#    Copyright (C) 2006  Andrew Straw  <strawman@astraw.com>
-#
-#    This program can be distributed under the terms of the GNU LGPL.
-#    See the file COPYING.
-#
+# structure taken from:
+# http://sourceforge.net/apps/mediawiki/fuse/index.php?title=FUSE_Python_tutorial
 
 import os, stat, errno
 import fuse
