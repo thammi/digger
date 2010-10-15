@@ -43,7 +43,7 @@ class ServiceFailedException(Exception):
     def __str__(self):
         return self.msg
 
-def api_call(service, method, options):
+def api_call(service, method, options, tries=3):
     base_urls = {
             'identica' : "http://identi.ca/api/",
             'twitter' : "http://api.twitter.com/1/",
@@ -68,8 +68,12 @@ def api_call(service, method, options):
     if res.getcode() < 300:
         return json.load(res)
     else:
-        msg = "Unable to fetch: %i" % res.getcode()
-        raise ServiceFailedException(msg)
+        if tries > 1 and res.getcode() >= 500:
+            print "ERROR while fetching, retrying"
+            return api_call(service, method, options, tries-1)
+        else:
+            msg = "Unable to fetch: %i" % res.getcode()
+            raise ServiceFailedException(msg)
         
 
 def get_page(service, user, count, page):
