@@ -47,6 +47,7 @@ def api_call(service, method, options, tries=3):
     base_urls = {
             'identica' : "http://identi.ca/api/",
             'twitter' : "http://api.twitter.com/1/",
+            'telecomix' : "http://status.telecomix.org/api/",
             }
 
     if service not in base_urls:

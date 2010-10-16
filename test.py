@@ -260,10 +260,25 @@ def hashtag_transform(batch):
     return hash_batch
 
 def microblogging_date(dent):
-    strf = "%a %b %d %H:%M:%S +0000 %Y"
-    stime = time.strptime(dent['created_at'], strf)
+    created = dent['created_at']
+
+    # splitting into time and timezone
+    time_str = created[:-10] + created[-4:]
+    tz_str = created[-10:-5]
+
+    # calculating raw time
+    strf = "%a %b %d %H:%M:%S %Y"
+    stime = time.strptime(time_str, strf)
     stamp = calendar.timegm(stime)
-    return datetime.fromtimestamp(stamp)
+
+    # determine timezone delta
+    hours = int(tz_str[1:3])
+    minutes = int(tz_str[3:5])
+    tz_delta = timedelta(hours=hours, minutes=minutes)
+    if tz_str[0] == '+':
+        tz_delta *= -1
+
+    return datetime.fromtimestamp(stamp) + tz_delta
 
 def log_date(entry):
     strf = "%Y-%m-%d %H:%M:%S"

@@ -27,6 +27,7 @@ from test import *
 def search(service, query):
     urls = {
             'identica' : "http://identi.ca/api/search.json",
+            'telecomix' : "http://status.telecomix.org/api/search.json",
             'twitter' : "http://search.twitter.com/search.json",
             }
 
