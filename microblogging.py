@@ -43,19 +43,31 @@ class ServiceFailedException(Exception):
     def __str__(self):
         return self.msg
 
-def api_call(service, method, options, tries=3):
-    base_urls = {
-            'identica' : "http://identi.ca/api/",
-            'twitter' : "http://api.twitter.com/1/",
-            'telecomix' : "http://status.telecomix.org/api/",
-            }
+urls = {
+        'identica': {
+            'api': "http://identi.ca/api/",
+            'search': "http://identi.ca/api/search.json",
+            },
+        'twitter': {
+            'api': "http://api.twitter.com/1/",
+            'search':"http://search.twitter.com/search.json",
+            },
+        'telecomix': {
+            'api': "http://status.telecomix.org/api/",
+            'search': "http://status.telecomix.org/api/search.json",
+            },
+        }
 
-    if service not in base_urls:
+def available_services():
+    return urls.keys()
+
+def api_call(service, method, options, tries=3):
+    if service not in urls:
         raise UnknownServiceException(service)
 
     url_parts = {
             'query': urllib.urlencode(options),
-            'base_url': base_urls[service],
+            'base_url': urls[service]['api'],
             'method': method,
             }
 
@@ -76,6 +88,35 @@ def api_call(service, method, options, tries=3):
             msg = "Unable to fetch: %i" % res.getcode()
             raise ServiceFailedException(msg)
         
+def search(service, query, page=1):
+    if service not in urls:
+        raise UnknownServiceException(service)
+
+    options = {
+            'q': query,
+            'rpp': 100,
+            'page': page,
+            }
+
+    url_parts = {
+            'query': urllib.urlencode(options),
+            'url': urls[service]['search'],
+            }
+
+    res = urllib.urlopen("{url}?{query}".format(**url_parts))
+
+    if res.getcode() < 300:
+        raw = json.load(res)
+
+        updates = raw['results']
+
+        if raw['results_per_page'] == len(updates):
+            updates.extend(search(service, query, page + 1))
+
+        return updates
+    else:
+        msg = "Unable to fetch: %i" % res.getcode()
+        raise ServiceFailedException(msg)
 
 def get_page(service, user, count, page):
     options = {
