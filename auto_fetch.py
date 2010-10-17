@@ -24,29 +24,6 @@ from os.path import join, exists
 from microblogging import *
 from test import *
 
-def search(service, query):
-    urls = {
-            'identica' : "http://identi.ca/api/search.json",
-            'telecomix' : "http://status.telecomix.org/api/search.json",
-            'twitter' : "http://search.twitter.com/search.json",
-            }
-
-    if service not in urls:
-        raise UnknownServiceException(service)
-
-    url_parts = {
-            'query': urllib.urlencode({'q': query}),
-            'url': urls[service],
-            }
-
-    res = urllib.urlopen("{url}?{query}".format(**url_parts))
-
-    if res.getcode() < 300:
-        return json.load(res)
-    else:
-        msg = "Unable to fetch: %i" % res.getcode()
-        raise ServiceFailedException(msg)
- 
 def user_exists(service, user):
     return exists(user_path(service, user))
 
@@ -57,7 +34,7 @@ def main(argv):
     service = argv[0]
     tags = argv[1:]
 
-    updates = search(service, ' '.join('#' + tag for tag in tags))['results']
+    updates = search(service, ' '.join('#' + tag for tag in tags))
 
     users = set(update['from_user'] for update in updates)
     users = filter(lambda u: not user_exists(service, u), users)
@@ -67,7 +44,7 @@ def main(argv):
     for user in users:
         try:
             print "==> Fetching '%s'" % user
-            updates = get_statuses(service, user, 1000)
+            updates = get_statuses(service, user, 2000)
 
             blob_graph(updates, user_path(service, user), microblogging_date)
         except Exception as e:
