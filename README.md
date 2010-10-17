@@ -1,13 +1,22 @@
-# digger - digging into some data mines
+# About
 
-## Dependencies
+This project fetches various data sources and generates graphs from them.
+
+Sources are usually fetched into Json files. These Json files are read in by
+another program which generates graphs based on the timestamps. This workflow is
+effective for small data sets and development. If you want to process large data
+sets (in realtime) use another approach!
+
+Feel free to extend the data sources and graphs.
+
+# Dependencies
 
 * Python Imaging Library (for roll graphs)
 * MatPlotLib (for line graphs)
 
-## Example Workflow
+# Example Workflow
 
-### Microblogging (Identica, Twitter)
+## Microblogging (Identica, Twitter)
 
 Fetch some data from identica or twitter
 
@@ -25,7 +34,7 @@ Create the graphs from the Json files with
 This command plots the graphs for each service specified to the ./out directory.
 There will be graphs for each user and the hashtags used by users you fetched.
 
-### Github
+## Github
 
 You can fetch specific branches from repositories
 
@@ -42,7 +51,7 @@ As soon as you have all repositories you want use
 To build the graphs. There will be graphs for each branch and for the users
 which committet to these branches.
 
-### Version Control
+## Version Control
 
 The DVCS module supports git and mercurial. You can specify a path to a
 repository or a path containing multiple repositories. It will recurse if the
@@ -54,16 +63,16 @@ And finally the graph creation
 
 	./test plot dvcs
 
-## Building search graphs from Microblogging
+# Building search graphs from Microblogging
 
-### Plotting searched messages
+## Plotting searched messages
 
 The following command will search for the given query and build graphs about the
 found messages in ./search
 
 	./search_graph.py "#ds2010"
 
-### Plotting users sending messages
+## Plotting users sending messages
 
 The following command will search for the specified _tags_ and build graphs about
 the users sending these messages in ./auto
