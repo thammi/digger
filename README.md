@@ -16,6 +16,11 @@ Feel free to extend the data sources and graphs.
 * MatPlotLib (for line graphs)
 * cjson (optional, faster Json processing)
 
+# Bugs and TODOs
+
+* the line graphs are not drawn correct at points with the value 0
+* ...
+
 # Example Workflow
 
 ## Microblogging (Identica, Twitter)
@@ -91,7 +96,7 @@ found messages in ./search
 
 ## Plotting users sending messages
 
-The following command will search for the specified _tags_ and build graphs about
+The following command will search for the specified **tags** and build graphs about
 the users sending these messages in ./auto
 
 	./auto_fetch.py identica ds2010 nackt
