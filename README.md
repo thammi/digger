@@ -11,8 +11,10 @@ Feel free to extend the data sources and graphs.
 
 # Dependencies
 
+* Python 2.6, 2.7
 * Python Imaging Library (for roll graphs)
 * MatPlotLib (for line graphs)
+* cjson (optional, faster Json processing)
 
 # Example Workflow
 
@@ -62,6 +64,21 @@ specified directory is not a repository.
 And finally the graph creation
 
 	./test plot dvcs
+
+## Last.fm
+
+You have to own an API key to access the last.fm service. lastfm.py expects your
+last.fm API key in the environment variable LASTFM\_KEY. To set it in a posix
+compatible shell use
+
+	export LASTFM_KEY your_api_key
+
+Now you can continue with the usual workflow
+
+	./lastfm.py username another_name
+	./test.py plot lastfm
+
+This data source generates graphs for users and artists scrobbled by the users.
 
 # Building search graphs from Microblogging
 
