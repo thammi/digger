@@ -43,6 +43,17 @@ class ServiceFailedException(Exception):
     def __str__(self):
         return self.msg
 
+class ProtectedUserException(Exception):
+    pass
+
+class PromptlessOpener(urllib.FancyURLopener):
+
+    def prompt_user_passwd(self, host, realm):
+        # this is kind of hacky ..
+        raise ProtectedUserException()
+
+myopener = PromptlessOpener()
+
 urls = {
         'identica': {
             'api': "http://identi.ca/api/",
@@ -71,7 +82,7 @@ def api_call(service, method, options, tries=3):
             'method': method,
             }
 
-    res = urllib.urlopen("{base_url}{method}.json?{query}".format(**url_parts))
+    res = myopener.open("{base_url}{method}.json?{query}".format(**url_parts))
 
     # watch rate limit (twitter only)
     ratelimit = re.search("X-RateLimit-Remaining: ([0-9]+)", str(res.info()))
@@ -103,7 +114,7 @@ def search(service, query, page=1):
             'url': urls[service]['search'],
             }
 
-    res = urllib.urlopen("{url}?{query}".format(**url_parts))
+    res = myopener.open("{url}?{query}".format(**url_parts))
 
     if res.getcode() < 300:
         raw = json.load(res)
@@ -137,30 +148,34 @@ def get_statuses(service, user, limit=None):
     statuses = []
 
     # how many dents are there?
-    count = api_call(service, 'users/show', {'id': user})['statuses_count']
+    try:
+        count = api_call(service, 'users/show', {'id': user})['statuses_count']
 
-    if limit:
-        count = min(count, limit)
+        if limit:
+            count = min(count, limit)
 
-    while count > 0:
-        print "Fetching page %i, %i updates remaining" % (page, count)
+        while count > 0:
+            print "Fetching page %i, %i updates remaining" % (page, count)
 
-        # how many statuses to fetch?
-        fetch_count = min(step, count)
+            # how many statuses to fetch?
+            fetch_count = min(step, count)
 
-        # fetch them
-        new_statuses = get_page(service, user, fetch_count, page)
+            # fetch them
+            new_statuses = get_page(service, user, fetch_count, page)
 
-        # update the count
-        count -= len(new_statuses)
+            # update the count
+            count -= len(new_statuses)
 
-        # save the statuses
-        statuses.extend(new_statuses)
+            # save the statuses
+            statuses.extend(new_statuses)
 
-        # next page
-        page += 1
+            # next page
+            page += 1
 
-    return statuses
+        return statuses
+    except ProtectedUserException:
+        print "Unable to fetch this user, protected account!"
+        return []
 
 def save_users(service, users):
     for user in users:
